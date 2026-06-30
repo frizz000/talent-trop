@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { relativeTime } from "@/lib/utils";
 
 export interface Athlete {
@@ -53,8 +54,9 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
   const score = athlete.talent_score;
 
   return (
+    <Link href={`/athlete-hub/${athlete.id}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
     <div
-      className="card overflow-hidden flex flex-col"
+      className="card overflow-hidden flex flex-col h-full"
       style={{ transition: "border-color 0.15s" }}
       onMouseEnter={(e) =>
         (e.currentTarget.style.borderColor = "var(--color-accent)")
@@ -160,5 +162,6 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
         </div>
       </div>
     </div>
+    </Link>
   );
 }

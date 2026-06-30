@@ -1,0 +1,44 @@
+name: Database Backup
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"   # 03:00 UTC every Sunday
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: pg_dump → artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        run: |
+          FILENAME="backup_$(date +%Y%m%d_%H%M%S).sql.gz"
+          pg_dump "$SUPABASE_DB_URL" \
+            --no-acl \
+            --no-owner \
+            --format=plain \
+            | gzip > "$FILENAME"
+          echo "BACKUP_FILE=$FILENAME" >> "$GITHUB_ENV"
+          echo "Backup created: $FILENAME ($(du -sh "$FILENAME" | cut -f1))"
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          # SUPABASE_DB_URL format:
+          # postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+          # Get it from: Supabase Dashboard → Project Settings → Database → Connection string
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_number }}-${{ github.run_attempt }}
+          path: backup_*.sql.gz
+          retention-days: 30
+          if-no-files-found: error

@@ -12,6 +12,10 @@ const NAV_ITEMS = [
   { href: "/watchlist",      label: "Watchlist",        icon: "🔖", short: "WATCH" },
 ] as const;
 
+const ADMIN_ITEMS = [
+  { href: "/admin", label: "Admin / Pipeline", icon: "⚙", short: "ADMIN" },
+] as const;
+
 export function Sidebar() {
   const pathname = usePathname();
 
@@ -69,6 +73,28 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
+
+      {/* Admin section */}
+      <div className="px-2 pb-2" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "8px" }}>
+        {ADMIN_ITEMS.map(({ href, label, icon }) => {
+          const active = pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex items-center gap-3 px-3 py-2 rounded-[8px] text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: active ? "var(--color-bg)" : "transparent",
+                color: active ? "var(--color-text)" : "var(--color-muted)",
+                borderLeft: active ? `2px solid var(--color-accent)` : "2px solid transparent",
+              }}
+            >
+              <span className="text-base leading-none">{icon}</span>
+              <span style={{ fontFamily: "var(--font-body)", fontSize: "13px" }}>{label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
       {/* Footer */}
       <div
