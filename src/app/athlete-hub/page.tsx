@@ -13,6 +13,7 @@ type PageProps = {
     discipline?: string;
     red_bull_status?: string;
     sort?: string;
+    discovery_status?: string;
   }>;
 };
 
@@ -21,7 +22,8 @@ type SortCol = "talent_score" | "name" | "created_at";
 async function fetchAthletes(
   discipline?: string,
   red_bull_status?: string,
-  sort: SortCol = "talent_score"
+  sort: SortCol = "talent_score",
+  discovery_status?: string,
 ): Promise<Athlete[]> {
   if (!isSupabaseConfigured()) return [];
 
@@ -29,12 +31,21 @@ async function fetchAthletes(
   let query = supabase
     .from("athletes")
     .select(
-      "id,name,discipline,talent_score,red_bull_status,social_status,photo_url,bio_summary,created_at"
+      "id,name,discipline,talent_score,red_bull_status,social_status,discovery_status,photo_url,bio_summary,created_at"
     )
     .limit(60);
 
   if (discipline) query = query.eq("discipline", discipline);
   if (red_bull_status) query = query.eq("red_bull_status", red_bull_status);
+
+  if (discovery_status === "confirmed") {
+    query = query.in("discovery_status", ["confirmed", "manual"]);
+  } else if (discovery_status) {
+    query = query.eq("discovery_status", discovery_status);
+  } else {
+    // Default: hide rejected
+    query = query.neq("discovery_status", "rejected");
+  }
 
   const ascending = sort === "name";
   query = query.order(sort, { ascending, nullsFirst: false });
@@ -49,10 +60,10 @@ async function fetchAthletes(
 
 export default async function AthleteHubPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const { discipline, red_bull_status, sort } = params;
+  const { discipline, red_bull_status, sort, discovery_status } = params;
   const sortCol = (sort as SortCol) ?? "talent_score";
 
-  const athletes = await fetchAthletes(discipline, red_bull_status, sortCol);
+  const athletes = await fetchAthletes(discipline, red_bull_status, sortCol, discovery_status);
 
   return (
     <div className="p-6 lg:p-8">
@@ -75,6 +86,7 @@ export default async function AthleteHubPage({ searchParams }: PageProps) {
           discipline={discipline}
           red_bull_status={red_bull_status}
           sort={sort}
+          discovery_status={discovery_status}
           total={athletes.length}
         />
       </Suspense>

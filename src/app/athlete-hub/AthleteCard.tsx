@@ -8,6 +8,7 @@ export interface Athlete {
   talent_score?: number | null;
   red_bull_status: "signed" | "unsigned" | "unknown";
   social_status: "verified" | "pending_review" | "not_found";
+  discovery_status?: "manual" | "auto_detected" | "confirmed" | "rejected" | null;
   photo_url?: string | null;
   bio_summary?: string | null;
   created_at: string;
@@ -81,6 +82,22 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
         >
           {athlete.name}
         </h3>
+
+        {/* Discovery badge */}
+        {athlete.discovery_status === "auto_detected" && (
+          <span
+            className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 self-start"
+            style={{
+              fontFamily: "var(--font-mono)",
+              backgroundColor: "var(--color-accent)22",
+              color: "var(--color-accent)",
+              border: "1px solid var(--color-accent)44",
+              borderRadius: "4px",
+            }}
+          >
+            NOWY — do weryfikacji
+          </span>
+        )}
 
         {/* Discipline */}
         <p className="text-xs" style={{ color: "var(--color-muted)" }}>

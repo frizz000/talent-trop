@@ -24,6 +24,13 @@ const RED_BULL_STATUSES = [
   { value: "unknown",  label: "Nieznany" },
 ];
 
+const DISCOVERY_OPTIONS = [
+  { value: "",             label: "Bez odrzuconych" },
+  { value: "auto_detected", label: "Do weryfikacji" },
+  { value: "confirmed",    label: "Potwierdzeni" },
+  { value: "rejected",     label: "Odrzuceni" },
+];
+
 const SORT_OPTIONS = [
   { value: "talent_score", label: "Talent Score ↓" },
   { value: "name",         label: "Imię A–Z" },
@@ -34,6 +41,7 @@ interface AthleteFiltersProps {
   discipline?: string;
   red_bull_status?: string;
   sort?: string;
+  discovery_status?: string;
   total: number;
 }
 
@@ -41,6 +49,7 @@ export function AthleteFilters({
   discipline,
   red_bull_status,
   sort,
+  discovery_status,
   total,
 }: AthleteFiltersProps) {
   const router = useRouter();
@@ -60,7 +69,7 @@ export function AthleteFilters({
     [pathname, router, searchParams]
   );
 
-  const hasFilters = !!(discipline || red_bull_status);
+  const hasFilters = !!(discipline || red_bull_status || discovery_status);
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -99,6 +108,24 @@ export function AthleteFilters({
         <option value="">Status Red Bull</option>
         {RED_BULL_STATUSES.map((s) => (
           <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
+
+      {/* Discovery status */}
+      <select
+        value={discovery_status ?? ""}
+        onChange={(e) => setParam("discovery_status", e.target.value || null)}
+        className="text-xs px-3 py-1.5 outline-none cursor-pointer"
+        style={{
+          backgroundColor: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
+          color: discovery_status ? "var(--color-text)" : "var(--color-muted)",
+          borderRadius: "8px",
+          fontFamily: "var(--font-body)",
+        }}
+      >
+        {DISCOVERY_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
 

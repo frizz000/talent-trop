@@ -88,10 +88,13 @@ Return valid JSON with these exact keys (no markdown, no code block):
   "discipline_tag": "one value from: {DISCIPLINES}",
   "sentiment": "positive" | "neutral" | "negative",
   "athlete_name": "full name if ONE specific athlete is the clear subject, else null",
+  "athlete_discipline": "athlete's primary sport discipline if athlete_name is set and inferrable from article context, else null",
+  "is_confident_individual_athlete": true | false,
   "is_breakthrough": true | false,
   "breakthrough_type": "debut" | "podium" | "record" | "title" | null
 }}
 
+is_confident_individual_athlete = true only when athlete_name is a single named real person who is clearly an athlete (not a team, national squad, coach, journalist, or ambiguous reference). Set false for groups, teams, or when uncertain.
 is_breakthrough = true only if the article describes a clear performance milestone: debut at senior level, podium at national/international event, new personal or world record, or winning a title. Otherwise false."""
 
     response = claude.messages.create(
@@ -109,15 +112,24 @@ is_breakthrough = true only if the article describes a clear performance milesto
     return json.loads(raw.strip())
 
 
-def try_link_athlete(sb: Client, athlete_name: str | None) -> str | None:
-    """Find athlete by fuzzy name match in our DB."""
+def try_link_or_create_athlete(
+    sb: Client,
+    athlete_name: str | None,
+    athlete_discipline: str | None,
+    is_confident: bool,
+) -> str | None:
+    """Find athlete by fuzzy name match; auto-create if confident and not found."""
     if not athlete_name or len(athlete_name.strip()) < 3:
         return None
+
+    name = athlete_name.strip()
+
     try:
+        # Fuzzy match against existing records
         result = (
             sb.table("athletes")
             .select("id")
-            .ilike("name", f"%{athlete_name.strip()}%")
+            .ilike("name", f"%{name}%")
             .limit(1)
             .execute()
         )
@@ -125,7 +137,40 @@ def try_link_athlete(sb: Client, athlete_name: str | None) -> str | None:
             return result.data[0]["id"]
     except Exception:
         pass
-    return None
+
+    # Don't auto-create if conditions aren't met
+    if not is_confident or not athlete_discipline or not athlete_discipline.strip():
+        return None
+
+    try:
+        # Exact case-insensitive check to avoid duplicates across pipeline runs
+        exact = (
+            sb.table("athletes")
+            .select("id")
+            .ilike("name", name)
+            .limit(1)
+            .execute()
+        )
+        if exact.data:
+            return exact.data[0]["id"]
+
+        insert_result = (
+            sb.table("athletes")
+            .insert({
+                "name": name,
+                "discipline": athlete_discipline.strip(),
+                "discovery_status": "auto_detected",
+                "social_status": "not_found",
+                "red_bull_status": "unknown",
+            })
+            .execute()
+        )
+        new_id = insert_result.data[0]["id"]
+        print(f"  + nowy kandydat: {name} ({athlete_discipline.strip()})")
+        return new_id
+    except Exception as e:
+        print(f"  [WARN] nie udało się utworzyć zawodnika {name}: {e}")
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -176,10 +221,16 @@ def main() -> None:
                 "breakthrough_type": result.get("breakthrough_type"),
             }
 
-            athlete_id = try_link_athlete(sb, result.get("athlete_name"))
+            athlete_id = try_link_or_create_athlete(
+                sb,
+                result.get("athlete_name"),
+                result.get("athlete_discipline"),
+                bool(result.get("is_confident_individual_athlete", False)),
+            )
             if athlete_id:
                 update["athlete_id"] = athlete_id
-                print(f"  linked athlete: {result['athlete_name']}")
+                if result.get("athlete_name"):
+                    print(f"  linked athlete: {result['athlete_name']}")
 
             sb.table("news_articles").update(update).eq("id", aid).execute()
             processed += 1

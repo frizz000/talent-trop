@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { ScoutNoteForm } from "./ScoutNoteForm";
 import { WatchlistStatusSelect } from "./WatchlistStatusSelect";
+import { updateDiscoveryStatus } from "./actions";
 
 export const revalidate = 60;
 
@@ -157,6 +158,66 @@ export default async function AthleteProfilePage({ params }: Props) {
       >
         ← Athlete Hub
       </Link>
+
+      {/* Verification banner — auto_detected athletes only */}
+      {athlete.discovery_status === "auto_detected" && (
+        <div
+          className="mb-6 p-4 flex items-center gap-4 flex-wrap"
+          style={{
+            border: "1px solid var(--color-accent)66",
+            borderRadius: "8px",
+            backgroundColor: "var(--color-accent)11",
+          }}
+        >
+          <div className="flex-1 min-w-0">
+            <p
+              className="text-xs font-bold uppercase tracking-wider"
+              style={{ fontFamily: "var(--font-mono)", color: "var(--color-accent)" }}
+            >
+              NOWY KANDYDAT — WYKRYTY AUTOMATYCZNIE
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--color-muted)" }}>
+              Zawodnik został odkryty przez pipeline z newsa. Zweryfikuj, czy to prawdziwy sportowiec.
+            </p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <form action={updateDiscoveryStatus}>
+              <input type="hidden" name="athlete_id" value={athlete.id} />
+              <input type="hidden" name="status" value="confirmed" />
+              <button
+                type="submit"
+                className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 cursor-pointer"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  backgroundColor: "var(--color-trend-up)22",
+                  color: "var(--color-trend-up)",
+                  border: "1px solid var(--color-trend-up)66",
+                  borderRadius: "6px",
+                }}
+              >
+                Potwierdź
+              </button>
+            </form>
+            <form action={updateDiscoveryStatus}>
+              <input type="hidden" name="athlete_id" value={athlete.id} />
+              <input type="hidden" name="status" value="rejected" />
+              <button
+                type="submit"
+                className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 cursor-pointer"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  backgroundColor: "var(--color-border)",
+                  color: "var(--color-muted)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "6px",
+                }}
+              >
+                Odrzuć
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <div className="flex gap-6 mb-8 flex-wrap">

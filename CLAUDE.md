@@ -29,7 +29,7 @@ Source of truth: `skaut_dashboard_architektura3.md` (full architecture brief).
 
 ## Database schema — tables
 
-1. **athletes** — core entity. Has `talent_score` (current), `bio_summary` (LLM), `red_bull_status` enum, `social_status` enum, `socials` jsonb
+1. **athletes** — core entity. Has `talent_score` (current), `bio_summary` (LLM), `red_bull_status` enum, `social_status` enum, `socials` jsonb, `discovery_status` text+check (`manual`|`auto_detected`|`confirmed`|`rejected`) — pipeline sets `auto_detected`, scout verifies via UI
 2. **news_articles** — ingested + LLM-processed articles. `region` enum (`poland`/`world`), `summary` is LLM paraphrase (never full text), `image_url` hotlinked from source
 3. **events** — competition calendar
 4. **event_results** — athlete placements at events
@@ -89,7 +89,7 @@ CSS variables: `--font-display`, `--font-body`, `--font-mono`
 ## Automation workflows (GitHub Actions — not yet implemented)
 
 1. `ingest.yml` — cron 2–4h: RSS + GDELT + sports API → `news_articles`, `event_results`
-2. `process.yml` — daily 06:00: LLM summaries + tagging + `talent_score` update
+2. `process.yml` — daily 06:00: LLM summaries + tagging + `talent_score` update; auto-creates `athletes` records (`discovery_status='auto_detected'`) when LLM detects a confident individual athlete not yet in DB
 3. `backup.yml` — weekly: `pg_dump` → GitHub Releases or Cloudflare R2
 4. `social_discovery.yml` — weekly: Instagram handle discovery + Brand Fit Score via LLM + Apify
 
