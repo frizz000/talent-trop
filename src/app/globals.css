@@ -1,0 +1,55 @@
+/* ── Custom fonts via Google Fonts — must precede @import "tailwindcss" ── */
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@import "tailwindcss";
+
+:root {
+  /* Palette */
+  --color-bg:        #0f0f0f;
+  --color-surface:   #1a1a1a;
+  --color-border:    #2a2a2a;
+  --color-text:      #f0f0f0;
+  --color-muted:     #6b6b6b;
+  --color-accent:    #e8351a;
+  --color-trend-up:  #84cc16;
+  --color-trend-dn:  #6b6b6b;
+
+  /* Typography */
+  --font-display: "Barlow Condensed", system-ui, sans-serif;
+  --font-body:    "Inter", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", monospace;
+}
+
+html, body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  height: 100%;
+}
+
+/* Flat card — 1px border, no shadow */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+/* Stat / numeric display */
+.stat {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+/* Accent badge */
+.badge-accent {
+  display: inline-block;
+  background-color: var(--color-accent);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
