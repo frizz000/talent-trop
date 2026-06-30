@@ -258,15 +258,8 @@ export default async function GapAnalysisPage() {
               {gaps.map((gap) => (
                 <tr
                   key={gap.discipline}
+                  className="hover-surface"
                   style={{ backgroundColor: "var(--color-bg)" }}
-                  onMouseEnter={(e) =>
-                    ((e.currentTarget as HTMLElement).style.backgroundColor =
-                      "var(--color-surface)")
-                  }
-                  onMouseLeave={(e) =>
-                    ((e.currentTarget as HTMLElement).style.backgroundColor =
-                      "var(--color-bg)")
-                  }
                 >
                   {/* Discipline name */}
                   <td

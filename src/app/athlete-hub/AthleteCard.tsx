@@ -56,14 +56,7 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
   return (
     <Link href={`/athlete-hub/${athlete.id}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
     <div
-      className="card overflow-hidden flex flex-col h-full"
-      style={{ transition: "border-color 0.15s" }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.borderColor = "var(--color-accent)")
-      }
-      onMouseLeave={(e) =>
-        (e.currentTarget.style.borderColor = "var(--color-border)")
-      }
+      className="card hover-border-accent overflow-hidden flex flex-col h-full"
     >
       {/* Photo / initials */}
       <div style={{ height: "140px", backgroundColor: "var(--color-bg)" }}>

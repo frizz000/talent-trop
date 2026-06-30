@@ -40,6 +40,11 @@ html, body {
   letter-spacing: -0.02em;
 }
 
+/* Hover utilities — replaces JS onMouseEnter/Leave so Server Components stay server */
+.hover-border-accent:hover { border-color: var(--color-accent); }
+.hover-surface:hover        { background-color: var(--color-surface); }
+.hover-underline:hover      { text-decoration: underline !important; }
+
 /* Accent badge */
 .badge-accent {
   display: inline-block;

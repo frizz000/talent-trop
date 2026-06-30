@@ -161,21 +161,12 @@ export default async function WatchlistPage() {
                         style={{ textDecoration: "none", display: "block" }}
                       >
                         <div
-                          className="flex items-center gap-4 px-4 py-3"
+                          className="hover-surface flex items-center gap-4 px-4 py-3"
                           style={{
                             borderBottom: isLast
                               ? "none"
                               : "1px solid var(--color-border)",
-                            transition: "background-color 0.1s",
                           }}
-                          onMouseEnter={(e) =>
-                            ((e.currentTarget as HTMLElement).style.backgroundColor =
-                              "var(--color-surface)")
-                          }
-                          onMouseLeave={(e) =>
-                            ((e.currentTarget as HTMLElement).style.backgroundColor =
-                              "transparent")
-                          }
                         >
                           {/* Photo / initials */}
                           <div

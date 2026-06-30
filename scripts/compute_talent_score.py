@@ -119,6 +119,25 @@ def social_signal_factor(athlete_id: str, since_days: int = 30) -> float:
     return best
 
 
+def breakthrough_factor(athlete_id: str, since_days: int = 90) -> float:
+    """Recent debut/podium/record/title detected by LLM. Max 10 pts."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=since_days)).isoformat()
+    res = (
+        db.from_("news_articles")
+        .select("breakthrough_type")
+        .eq("athlete_id", athlete_id)
+        .eq("is_breakthrough", True)
+        .gte("published_at", cutoff)
+        .execute()
+    )
+    breakthroughs = res.data or []
+    if not breakthroughs:
+        return 0.0
+    # Title/record = full 10 pts; podium = 7; debut = 5
+    weights = {"title": 10.0, "record": 10.0, "podium": 7.0, "debut": 5.0}
+    return max(weights.get(b.get("breakthrough_type", ""), 5.0) for b in breakthroughs)
+
+
 def discipline_gap_multiplier(discipline: str) -> float:
     """Undercovered disciplines earn a 1.0–1.5× multiplier from priority_score."""
     if discipline in _gap_cache:
@@ -144,7 +163,8 @@ def compute(athlete: dict) -> tuple[float, dict]:
     mf = mention_spike_factor(aid)
     sf = sentiment_factor(aid)
     ssf = social_signal_factor(aid)
-    raw = af + mf + sf + ssf
+    bf = breakthrough_factor(aid)
+    raw = af + mf + sf + ssf + bf
     mult = discipline_gap_multiplier(discipline)
     final = min(100.0, raw * mult)
 
@@ -153,6 +173,7 @@ def compute(athlete: dict) -> tuple[float, dict]:
         "mention_spike_factor": round(mf, 2),
         "sentiment_factor": round(sf, 2),
         "social_signal_factor": round(ssf, 2),
+        "breakthrough_factor": round(bf, 2),
         "discipline_gap_multiplier": round(mult, 3),
         "raw_score": round(raw, 2),
     }

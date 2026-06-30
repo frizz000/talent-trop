@@ -107,17 +107,8 @@ function HeroCard({ athlete }: { athlete: AthleteWithDelta }) {
       style={{ textDecoration: "none", display: "block" }}
     >
       <div
-        className="card overflow-hidden flex flex-col"
-        style={{
-          transition: "border-color 0.15s",
-          minHeight: "260px",
-        }}
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.borderColor = "var(--color-accent)")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.borderColor = "var(--color-border)")
-        }
+        className="card hover-border-accent overflow-hidden flex flex-col"
+        style={{ minHeight: "260px" }}
       >
         {/* Photo / initials */}
         <div
@@ -210,18 +201,8 @@ function CompactRow({
       style={{ textDecoration: "none", display: "block" }}
     >
       <div
-        className="flex items-center gap-4 py-3 px-4"
-        style={{
-          borderBottom: "1px solid var(--color-border)",
-          transition: "background-color 0.1s",
-        }}
-        onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLElement).style.backgroundColor =
-            "var(--color-surface)")
-        }
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLElement).style.backgroundColor = "transparent")
-        }
+        className="hover-surface flex items-center gap-4 py-3 px-4"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <span
           className="stat text-lg font-bold w-8 text-right shrink-0"

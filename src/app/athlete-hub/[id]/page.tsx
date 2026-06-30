@@ -464,14 +464,8 @@ export default async function AthleteProfilePage({ params }: Props) {
                     href={article.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm font-medium leading-snug"
+                    className="hover-underline text-sm font-medium leading-snug"
                     style={{ color: "var(--color-text)", textDecoration: "none" }}
-                    onMouseEnter={(e) =>
-                      ((e.target as HTMLElement).style.textDecoration = "underline")
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.target as HTMLElement).style.textDecoration = "none")
-                    }
                   >
                     {article.title}
                   </a>

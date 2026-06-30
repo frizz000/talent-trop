@@ -87,8 +87,12 @@ Return valid JSON with these exact keys (no markdown, no code block):
   "summary": "2-3 sentence paraphrase in {lang_hint}. Never copy text verbatim. Write as if briefing a talent scout.",
   "discipline_tag": "one value from: {DISCIPLINES}",
   "sentiment": "positive" | "neutral" | "negative",
-  "athlete_name": "full name if ONE specific athlete is the clear subject, else null"
-}}"""
+  "athlete_name": "full name if ONE specific athlete is the clear subject, else null",
+  "is_breakthrough": true | false,
+  "breakthrough_type": "debut" | "podium" | "record" | "title" | null
+}}
+
+is_breakthrough = true only if the article describes a clear performance milestone: debut at senior level, podium at national/international event, new personal or world record, or winning a title. Otherwise false."""
 
     response = claude.messages.create(
         model=HAIKU_MODEL,
@@ -168,6 +172,8 @@ def main() -> None:
                 "summary": result.get("summary"),
                 "discipline_tag": result.get("discipline_tag"),
                 "sentiment": result.get("sentiment"),
+                "is_breakthrough": bool(result.get("is_breakthrough", False)),
+                "breakthrough_type": result.get("breakthrough_type"),
             }
 
             athlete_id = try_link_athlete(sb, result.get("athlete_name"))
@@ -177,7 +183,9 @@ def main() -> None:
 
             sb.table("news_articles").update(update).eq("id", aid).execute()
             processed += 1
-            print(f"  ✓ {result.get('discipline_tag')} | {result.get('sentiment')}")
+            bt = result.get("breakthrough_type")
+            bt_str = f" 🔥 {bt}" if bt else ""
+            print(f"  ✓ {result.get('discipline_tag')} | {result.get('sentiment')}{bt_str}")
 
         except json.JSONDecodeError as e:
             msg = f"{aid}: JSON parse error — {e}"

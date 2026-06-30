@@ -11,14 +11,7 @@ export function ArticleCard({ article }: { article: Article }) {
       className="block group"
     >
       <div
-        className="card flex gap-3 p-3 transition-colors"
-        style={{ borderColor: "var(--color-border)" }}
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.borderColor = "var(--color-accent)")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.borderColor = "var(--color-border)")
-        }
+        className="card hover-border-accent flex gap-3 p-3 transition-colors"
       >
         {/* Thumbnail */}
         {article.image_url ? (
