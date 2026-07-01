@@ -91,11 +91,15 @@ Return valid JSON with these exact keys (no markdown, no code block):
   "athlete_discipline": "athlete's primary sport discipline if athlete_name is set and inferrable from article context, else null",
   "is_confident_individual_athlete": true | false,
   "is_breakthrough": true | false,
-  "breakthrough_type": "debut" | "podium" | "record" | "title" | null
+  "breakthrough_type": "debut" | "podium" | "record" | "title" | null,
+  "athlete_nationality_poland": true | false | null,
+  "is_global_superstar": true | false
 }}
 
 is_confident_individual_athlete = true only when athlete_name is a single named real person who is clearly an athlete (not a team, national squad, coach, journalist, or ambiguous reference). Set false for groups, teams, or when uncertain.
-is_breakthrough = true only if the article describes a clear performance milestone: debut at senior level, podium at national/international event, new personal or world record, or winning a title. Otherwise false."""
+is_breakthrough = true only if the article describes a clear performance milestone: debut at senior level, podium at national/international event, new personal or world record, or winning a title. Otherwise false.
+athlete_nationality_poland = true ONLY if the article unambiguously indicates the athlete holds Polish citizenship OR officially represents Poland in their sport. false if clearly from another country. null if the article provides no nationality information.
+is_global_superstar = true if this person is recognized globally well beyond their sport's fan base — a random non-sports-fan on the street would likely recognize the name (e.g. LeBron James, Serena Williams, Erling Haaland, Robert Lewandowski, Iga Swiatek). This applies regardless of nationality: even top Polish athletes who are already globally famous are NOT talent gaps for Red Bull. false for emerging, niche, or nationally-known athletes."""
 
     response = claude.messages.create(
         model=HAIKU_MODEL,
@@ -117,15 +121,25 @@ def try_link_or_create_athlete(
     athlete_name: str | None,
     athlete_discipline: str | None,
     is_confident: bool,
+    nationality_poland: bool | None,
+    is_global_superstar: bool,
+    article_region: str,
 ) -> str | None:
-    """Find athlete by fuzzy name match; auto-create if confident and not found."""
+    """Find athlete by fuzzy name match; auto-create only for Polish non-superstars.
+
+    Creation guards (ALL must pass):
+      1. is_confident_individual_athlete == true
+      2. athlete_nationality_poland == true  (article must confirm Polish identity)
+      3. is_global_superstar == false         (superstars are not talent gaps)
+      4. article_region == 'poland'           (world articles never create new records)
+    """
     if not athlete_name or len(athlete_name.strip()) < 3:
         return None
 
     name = athlete_name.strip()
 
     try:
-        # Fuzzy match against existing records
+        # Fuzzy match against existing records (link regardless of creation guards)
         result = (
             sb.table("athletes")
             .select("id")
@@ -138,8 +152,19 @@ def try_link_or_create_athlete(
     except Exception:
         pass
 
-    # Don't auto-create if conditions aren't met
-    if not is_confident or not athlete_discipline or not athlete_discipline.strip():
+    # Creation guards — all must pass
+    if not is_confident:
+        return None
+    if not athlete_discipline or not athlete_discipline.strip():
+        return None
+    if nationality_poland is not True:
+        print(f"  [SKIP] {name}: nationality_poland={nationality_poland}, not creating record")
+        return None
+    if is_global_superstar:
+        print(f"  [SKIP] {name}: is_global_superstar=true, not a talent gap")
+        return None
+    if article_region != "poland":
+        print(f"  [SKIP] {name}: article region='{article_region}', world articles don't create athletes")
         return None
 
     try:
@@ -226,6 +251,9 @@ def main() -> None:
                 result.get("athlete_name"),
                 result.get("athlete_discipline"),
                 bool(result.get("is_confident_individual_athlete", False)),
+                result.get("athlete_nationality_poland"),  # true/false/null
+                bool(result.get("is_global_superstar", False)),
+                art["region"],
             )
             if athlete_id:
                 update["athlete_id"] = athlete_id
