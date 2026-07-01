@@ -101,12 +101,34 @@ Fuzzy-linking to existing athletes (for article tagging) still happens regardles
 
 `discovery_status` lifecycle: `auto_detected` → scout reviews in UI → `confirmed` or `rejected`. Pipeline also sets `rejected` directly when cleanup detects non-Polish/superstar records.
 
-## Automation workflows (GitHub Actions — not yet implemented)
+## Federation data sources
+
+Primary authoritative data for Polish athletes (bypasses LLM nationality filter — license = confirmed).
+Table: `federation_profiles` (migration `0005_federation_profiles.sql`).
+Script: `scripts/ingest_federations.py` — CLI `--sources pza,pzkol,pzm [--dry-run]`.
+Source scrapers: `scripts/sources/` package.
+
+| Source | Federation | Disciplines | URL | Method | `nationality_confirmed` |
+|---|---|---|---|---|---|
+| PZA Climbing | `pza` | bouldering / lead / speed | PDF 2024: `pza.org.pl/wp-content/uploads/2024/12/rankingi-PP-se.pdf`; Sheet 2025: Google Sheets gviz CSV | pdfplumber + CSV | `True` — PZA license |
+| PZKol MTB XCO | `pzkol_mtb` | mtb_xco | `pzkol.pl/pobierz/12489/...` (34-page PDF, 14 age categories) | pdfplumber | `True` — PZKol license |
+| PZM Motocross | `pzm_motocross` | motocross | `wyniki.motoresults.pl/en/2025/Motocross/AMIC/` (10 AMIC categories) | BeautifulSoup + Claude Haiku filter | `False` — LLM-filtered |
+
+**Discovery status from federation sources:**
+- `pza` / `pzkol_mtb` → `confirmed` (license = Polish, no LLM needed)
+- `pzm_motocross` → `auto_detected` (LLM nationality filter, requires scout review)
+
+**Fuzzy name matching:** `SequenceMatcher` threshold 0.85. Exact ilike first, then word-by-word fuzzy on first 2 words > 3 chars.
+
+**Scheduled:** `.github/workflows/ingest_federations.yml` — monthly on 1st at 05:00 UTC.
+
+## Automation workflows (GitHub Actions)
 
 1. `ingest.yml` — cron 2–4h: RSS + GDELT + sports API → `news_articles`, `event_results`
 2. `process.yml` — daily 06:00: LLM summaries + tagging + `talent_score` update; auto-creates `athletes` records (see Auto-discovery filters above)
 3. `backup.yml` — weekly: `pg_dump` → GitHub Releases or Cloudflare R2
 4. `social_discovery.yml` — weekly: Instagram handle discovery + Brand Fit Score via LLM + Apify
+5. `ingest_federations.yml` — monthly 1st at 05:00 UTC: PZA + PZKol MTB + PZM Motocross → `athletes` + `federation_profiles`
 
 ## Talent Score algorithm
 
