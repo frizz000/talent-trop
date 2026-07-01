@@ -86,10 +86,25 @@ CSS variables: `--font-display`, `--font-body`, `--font-mono`
 - Photography-led (athlete photos, event images) — no abstract blobs or decorative icons
 - No gradients anywhere
 
+## Auto-discovery filters (athletes table)
+
+A new `athletes` row (`discovery_status='auto_detected'`) is created **only when ALL four conditions hold**:
+
+| # | Condition | LLM field | Rationale |
+|---|---|---|---|
+| 1 | Confident individual athlete | `is_confident_individual_athlete = true` | No teams, squads, or ambiguous references |
+| 2 | Polish identity confirmed | `athlete_nationality_poland = true` | Article must unambiguously indicate Polish citizenship or representation; `null` = unknown → skip |
+| 3 | Not a global superstar | `is_global_superstar = false` | Top-tier globally famous athletes (Lewandowski, Świątek, LeBron) are not talent gaps for Red Bull |
+| 4 | Article from Polish sources | `article_region = 'poland'` | World-region articles (BBC, ESPN, Reuters) tag and summarize but never create new athletes |
+
+Fuzzy-linking to existing athletes (for article tagging) still happens regardless of these filters.
+
+`discovery_status` lifecycle: `auto_detected` → scout reviews in UI → `confirmed` or `rejected`. Pipeline also sets `rejected` directly when cleanup detects non-Polish/superstar records.
+
 ## Automation workflows (GitHub Actions — not yet implemented)
 
 1. `ingest.yml` — cron 2–4h: RSS + GDELT + sports API → `news_articles`, `event_results`
-2. `process.yml` — daily 06:00: LLM summaries + tagging + `talent_score` update; auto-creates `athletes` records (`discovery_status='auto_detected'`) when LLM detects a confident individual athlete not yet in DB
+2. `process.yml` — daily 06:00: LLM summaries + tagging + `talent_score` update; auto-creates `athletes` records (see Auto-discovery filters above)
 3. `backup.yml` — weekly: `pg_dump` → GitHub Releases or Cloudflare R2
 4. `social_discovery.yml` — weekly: Instagram handle discovery + Brand Fit Score via LLM + Apify
 
