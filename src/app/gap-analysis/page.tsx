@@ -1,16 +1,23 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 
 export const metadata = { title: "Gap Analysis — Talent Trop" };
 export const revalidate = 3600;
 
-const COUNTRIES = ["poland", "germany", "czech_republic", "france", "austria"] as const;
+// Preferred column order; extra countries found in data are appended
+const COUNTRY_ORDER = ["germany", "czech_republic", "france", "austria", "uk"];
 const COUNTRY_LABELS: Record<string, string> = {
   poland: "Polska",
   germany: "DE",
   czech_republic: "CZ",
   france: "FR",
   austria: "AT",
+  uk: "UK",
+  switzerland: "CH",
+  netherlands: "NL",
+  spain: "ES",
+  portugal: "PT",
 };
 
 const COVERAGE = {
@@ -75,10 +82,17 @@ export default async function GapAnalysisPage() {
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("discipline_gaps")
-    .select("discipline, poland_coverage_status, comparator_countries_coverage, priority_score")
-    .order("priority_score", { ascending: false });
+  const [{ data, error }, { data: athleteRows }] = await Promise.all([
+    supabase
+      .from("discipline_gaps")
+      .select("discipline, poland_coverage_status, comparator_countries_coverage, priority_score")
+      .order("priority_score", { ascending: false }),
+    supabase
+      .from("athletes")
+      .select("discipline")
+      .neq("discovery_status", "rejected")
+      .limit(3000),
+  ]);
 
   const gaps: DisciplineGap[] = (data ?? []).map((row) => ({
     discipline: row.discipline,
@@ -87,6 +101,25 @@ export default async function GapAnalysisPage() {
       (row.comparator_countries_coverage as Record<string, string>) ?? {},
     priority_score: row.priority_score,
   }));
+
+  // Real candidate supply per discipline from our own athlete DB
+  const candidateCounts = new Map<string, number>();
+  for (const row of athleteRows ?? []) {
+    if (row.discipline) {
+      candidateCounts.set(row.discipline, (candidateCounts.get(row.discipline) ?? 0) + 1);
+    }
+  }
+
+  // Country columns: preferred order first, then any extra keys present in data
+  const seenCountries = new Set<string>();
+  for (const g of gaps) {
+    for (const c of Object.keys(g.comparator_countries_coverage)) seenCountries.add(c);
+  }
+  const comparators = [
+    ...COUNTRY_ORDER.filter((c) => seenCountries.has(c)),
+    ...[...seenCountries].filter((c) => !COUNTRY_ORDER.includes(c)).sort(),
+  ];
+  const COUNTRIES = ["poland", ...comparators];
 
   const topOpportunities = gaps.filter(
     (g) => g.poland_coverage_status === "none" || g.poland_coverage_status === "weak"
@@ -103,7 +136,7 @@ export default async function GapAnalysisPage() {
           Gap Analysis
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-          Red Bull Heatmap — pokrycie dyscyplin Polska vs. komparatory
+          Red Bull Heatmap — pokrycie dyscyplin Polska vs. inne kraje + liczba kandydatów w bazie
         </p>
       </div>
 
@@ -233,6 +266,21 @@ export default async function GapAnalysisPage() {
                 >
                   Priorytet
                 </th>
+                <th
+                  style={{
+                    padding: "10px 12px",
+                    textAlign: "center",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    color: "var(--color-muted)",
+                    border: "1px solid var(--color-border)",
+                    whiteSpace: "nowrap",
+                  }}
+                  title="Zawodnicy tej dyscypliny w naszej bazie"
+                >
+                  Kandydaci
+                </th>
                 {COUNTRIES.map((c) => (
                   <th
                     key={c}
@@ -249,7 +297,7 @@ export default async function GapAnalysisPage() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {COUNTRY_LABELS[c]}
+                    {COUNTRY_LABELS[c] ?? c.toUpperCase()}
                   </th>
                 ))}
               </tr>
@@ -296,6 +344,32 @@ export default async function GapAnalysisPage() {
                     }}
                   >
                     {gap.priority_score ?? "—"}
+                  </td>
+
+                  {/* Candidate supply from our DB */}
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      textAlign: "center",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {(candidateCounts.get(gap.discipline) ?? 0) > 0 ? (
+                      <Link
+                        href={`/athlete-hub?discipline=${encodeURIComponent(gap.discipline)}`}
+                        style={{
+                          color: "var(--color-trend-up)",
+                          textDecoration: "none",
+                        }}
+                      >
+                        {candidateCounts.get(gap.discipline)}
+                      </Link>
+                    ) : (
+                      <span style={{ color: "var(--color-muted)", opacity: 0.5 }}>0</span>
+                    )}
                   </td>
 
                   {/* Country cells */}

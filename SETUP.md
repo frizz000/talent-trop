@@ -110,6 +110,77 @@ Możesz też poprosić Claude w kolejnej sesji żeby wygenerował seed SQL z Two
 
 ---
 
+## Krok 7 — Następne kroki (stan na 2 lipca 2026)
+
+Pipeline działa: baza ma ~1200 zawodników ze scoringiem, kalendarz imprez, brand fit
+dla top 150 prospektów. Poniższe kroki odblokowują resztę funkcji — **tylko Ty możesz
+je zrobić** (wymagają Twoich kont).
+
+### 7a. Google Custom Search — wyszukiwanie kont Instagram (WAŻNE)
+
+Obecny klucz w `.env.local` jest **nieważny** (API go odrzuca). Bez niego pipeline
+nie szuka kont IG zawodników (celowo nie zgadujemy nazw kont LLM-em — zmyślał).
+
+1. Wejdź na https://console.cloud.google.com → utwórz projekt (lub użyj istniejącego)
+2. **APIs & Services → Library** → włącz **Custom Search API**
+3. **APIs & Services → Credentials → Create credentials → API key** → skopiuj klucz
+4. Wejdź na https://programmablesearchengine.google.com → **Add** → w polu
+   "What to search" daj **Search the entire web** → utwórz → skopiuj
+   **Search engine ID** (to jest `GOOGLE_CSE_CX`)
+5. Podmień w `.env.local`: `GOOGLE_CSE_API_KEY=...` i `GOOGLE_CSE_CX=...`
+6. Dodaj oba jako GitHub Secrets (Settings → Secrets → Actions):
+   `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_CX`
+
+Limit darmowy: 100 zapytań/dzień — pipeline używa max 40/tydzień, więc spokojnie.
+
+- [ ] Klucz Custom Search API utworzony i podmieniony w `.env.local`
+- [ ] `GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_CX` dodane jako GitHub Secrets
+
+### 7b. Apify — walidacja kont IG + liczba followersów (opcjonalne, ale warto)
+
+Obecny token w `.env.local` jest **nieważny**.
+
+1. Załóż konto na https://apify.com (darmowy plan = $5 kredytu/mies. — wystarczy)
+2. **Settings → Integrations → API tokens** → skopiuj token
+3. Podmień w `.env.local`: `APIFY_API_TOKEN=...`
+4. Dodaj GitHub Secret: `APIFY_API_TOKEN`
+
+- [ ] Token Apify podmieniony w `.env.local` i dodany jako Secret
+
+### 7c. Sprawdź, czy workflowy chodzą na zielono
+
+GitHub → zakładka **Actions**. Po ostatnich zmianach masz 7 workflowów:
+
+| Workflow | Harmonogram | Co robi |
+|---|---|---|
+| Ingest RSS | co 2–4h | newsy → `news_articles` |
+| Process Articles (LLM) | 06:00 + 18:00 | podsumowania, tagi, wykrywanie zawodników |
+| Compute Talent Scores | 07:00 | przelicza talent score (zasila Breakout Radar) |
+| Ingest Federation Event Calendars | pon. 04:00 | kalendarz imprez PZA + PZKol |
+| Social Discovery & Brand Fit | pon. 08:00 | konta IG (po kroku 7a) + brand fit |
+| Ingest Federations | 1. dzień mies. | rankingi PZA/PZKol/PZM |
+| Backup | co tydzień | kopia bazy |
+
+Jak któryś jest czerwony → kliknij → skopiuj log → wklej Claude'owi w sesji.
+
+- [ ] Wszystkie workflowy zielone (albo logi przekazane do naprawy)
+
+### 7d. Weryfikacja kandydatów (Twoja robota jako skauta — na bieżąco)
+
+- W **Athlete Hub** ustaw filtr "Do weryfikacji" → wchodź w profile → **Potwierdź** / **Odrzuć**
+- Zawodnicy z PZM Motocross (LLM-filtrowani) też czekają na weryfikację
+- Odrzuceni znikają ze scoringu automatycznie
+
+### 7e. Zweryfikuj dane Gap Analysis przed pokazaniem komukolwiek
+
+Statusy pokrycia Polska vs. inne kraje w `discipline_gaps` to **szacunki startowe**.
+Przejrzyj https://www.redbull.com/pl-pl/athletes (i wersje DE/CZ/FR/AT) i popraw
+statusy w Supabase (Table Editor → `discipline_gaps`) tam, gdzie się nie zgadzają.
+
+- [ ] Statusy pokrycia zweryfikowane z oficjalnym rosterem Red Bull
+
+---
+
 ## Koszty miesięczne (przypomnienie)
 
 | Usługa | Koszt |

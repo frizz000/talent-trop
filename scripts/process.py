@@ -25,10 +25,12 @@ BATCH_SIZE = int(os.environ.get("PROCESS_BATCH_SIZE", "120"))
 HAIKU_MODEL = "claude-haiku-4-5-20251001"
 
 DISCIPLINES = (
-    "skateboarding, snowboarding, freestyle skiing, mountain biking, BMX, "
-    "surfing, rock climbing, motocross, wingsuit, paragliding, trail running, "
-    "kitesurfing, wakeboarding, parkour, luge, slacklining, "
-    "athletics, swimming, cycling, football, basketball, tennis, volleyball, "
+    "skateboarding, snowboarding, freestyle skiing, ski jumping, ski mountaineering, "
+    "biathlon, mountain biking, mtb_xco, BMX, motocross, speedway, drifting, sim racing, "
+    "bouldering, lead, speed, surfing, kitesurfing, windsurfing, wakeboarding, "
+    "cliff diving, canoe slalom, wingsuit, paragliding, trail running, parkour, "
+    "breaking, slacklining, athletics, swimming, gymnastics, boxing, cycling, "
+    "football, basketball, basketball 3x3, tennis, volleyball, "
     "combat sports, winter sports, water sports, extreme sports, other"
 )
 
