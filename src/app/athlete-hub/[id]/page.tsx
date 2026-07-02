@@ -95,7 +95,7 @@ export default async function AthleteProfilePage({ params }: Props) {
 
   if (!athlete) notFound();
 
-  const [historyRes, brandFitRes, notesRes, eventsRes, newsRes] = await Promise.all([
+  const [historyRes, brandFitRes, notesRes, eventsRes, newsRes, fedRes] = await Promise.all([
     supabase
       .from("talent_score_history")
       .select("score, computed_at, factors")
@@ -125,6 +125,12 @@ export default async function AthleteProfilePage({ params }: Props) {
       .eq("athlete_id", id)
       .order("published_at", { ascending: false })
       .limit(6),
+    supabase
+      .from("federation_profiles")
+      .select("federation, discipline, ranking_category, season, ranking_position, points, club")
+      .eq("athlete_id", id)
+      .order("season", { ascending: false })
+      .order("ranking_position", { ascending: true }),
   ]);
 
   const history = historyRes.data ?? [];
@@ -132,6 +138,7 @@ export default async function AthleteProfilePage({ params }: Props) {
   const notes = notesRes.data ?? [];
   const eventResults = eventsRes.data ?? [];
   const news = newsRes.data ?? [];
+  const fedProfiles = fedRes.data ?? [];
 
   const scores = history.map((h) => Number(h.score));
   const latestFactors =
@@ -433,6 +440,105 @@ export default async function AthleteProfilePage({ params }: Props) {
                 </div>
               ))}
           </div>
+        </div>
+      )}
+
+      {/* Federation rankings — authoritative Polish federation data */}
+      {fedProfiles.length > 0 && (
+        <div className="card p-4 mb-6">
+          <h2
+            className="text-sm font-bold uppercase tracking-wider mb-3"
+            style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
+          >
+            Rankingi federacji
+          </h2>
+          <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["Federacja", "Kategoria", "Sezon", "Miejsce", "Punkty", "Klub"].map((h) => (
+                  <th
+                    key={h}
+                    className="stat text-xs uppercase tracking-wider py-2 pr-4"
+                    style={{
+                      color: "var(--color-muted)",
+                      borderBottom: "1px solid var(--color-border)",
+                      fontWeight: 400,
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {fedProfiles.map((fp: any, i: number) => (
+                <tr key={i}>
+                  <td
+                    className="text-xs font-bold uppercase py-2 pr-4"
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      color: "var(--color-text)",
+                      borderBottom: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {fp.federation === "pza"
+                      ? "PZA"
+                      : fp.federation === "pzkol_mtb"
+                        ? "PZKol MTB"
+                        : fp.federation === "pzm_motocross"
+                          ? "PZM Motocross"
+                          : fp.federation}
+                  </td>
+                  <td
+                    className="stat text-xs py-2 pr-4"
+                    style={{
+                      color: "var(--color-muted)",
+                      borderBottom: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {fp.ranking_category ?? "—"}
+                  </td>
+                  <td
+                    className="stat text-xs py-2 pr-4"
+                    style={{
+                      color: "var(--color-muted)",
+                      borderBottom: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {fp.season ?? "—"}
+                  </td>
+                  <td
+                    className="stat text-sm font-bold py-2 pr-4"
+                    style={{
+                      color: PLACEMENT_COLORS(fp.ranking_position),
+                      borderBottom: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {fp.ranking_position != null ? `#${fp.ranking_position}` : "—"}
+                  </td>
+                  <td
+                    className="stat text-xs py-2 pr-4"
+                    style={{
+                      color: "var(--color-muted)",
+                      borderBottom: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {fp.points ?? "—"}
+                  </td>
+                  <td
+                    className="text-xs py-2"
+                    style={{
+                      color: "var(--color-muted)",
+                      borderBottom: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {fp.club ?? "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

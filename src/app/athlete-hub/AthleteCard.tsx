@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { relativeTime } from "@/lib/utils";
 
+export interface FederationProfile {
+  federation: string;
+  ranking_category: string | null;
+  ranking_position: number | null;
+}
+
 export interface Athlete {
   id: string;
   name: string;
   discipline: string;
+  birth_date?: string | null;
   talent_score?: number | null;
   red_bull_status: "signed" | "unsigned" | "unknown";
   social_status: "verified" | "pending_review" | "not_found";
@@ -12,6 +19,42 @@ export interface Athlete {
   photo_url?: string | null;
   bio_summary?: string | null;
   created_at: string;
+  federation_profiles?: FederationProfile[];
+}
+
+const FEDERATION_LABELS: Record<string, string> = {
+  pza: "PZA",
+  pzkol_mtb: "PZKol",
+  pzm_motocross: "PZM",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  u13_men: "U13", u13_women: "U13",
+  u15_men: "U15", u15_women: "U15",
+  u17_men: "U17", u17_women: "U17",
+  junior_men: "Junior", junior_women: "Junior",
+  elite_men: "Elita", elite_women: "Elita",
+  senior_men_bouldering: "Senior", senior_women_bouldering: "Senior",
+  mx65: "MX65", mx85: "MX85", mx_junior: "MX Junior",
+};
+
+function ageFromBirthDate(birthDate: string): number {
+  return Math.floor(
+    (Date.now() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+  );
+}
+
+function bestFederationBadge(profiles?: FederationProfile[]): string | null {
+  if (!profiles || profiles.length === 0) return null;
+  const best = [...profiles].sort(
+    (a, b) => (a.ranking_position ?? 999) - (b.ranking_position ?? 999)
+  )[0];
+  const fed = FEDERATION_LABELS[best.federation] ?? best.federation.toUpperCase();
+  const cat = best.ranking_category
+    ? CATEGORY_LABELS[best.ranking_category] ?? best.ranking_category
+    : null;
+  const pos = best.ranking_position != null ? `#${best.ranking_position}` : null;
+  return [fed, cat, pos].filter(Boolean).join(" ");
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -53,6 +96,8 @@ function Initials({ name }: { name: string }) {
 
 export function AthleteCard({ athlete }: { athlete: Athlete }) {
   const score = athlete.talent_score;
+  const age = athlete.birth_date ? ageFromBirthDate(athlete.birth_date) : null;
+  const fedBadge = bestFederationBadge(athlete.federation_profiles);
 
   return (
     <Link href={`/athlete-hub/${athlete.id}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
@@ -99,10 +144,36 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
           </span>
         )}
 
-        {/* Discipline */}
+        {/* Discipline + age */}
         <p className="text-xs" style={{ color: "var(--color-muted)" }}>
           {athlete.discipline}
+          {age != null && (
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                color: age < 18 ? "var(--color-trend-up)" : "var(--color-muted)",
+              }}
+            >
+              {" • "}{age} lat
+            </span>
+          )}
         </p>
+
+        {/* Federation ranking badge */}
+        {fedBadge && (
+          <span
+            className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 self-start"
+            style={{
+              fontFamily: "var(--font-mono)",
+              backgroundColor: "var(--color-bg)",
+              color: "var(--color-text)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "4px",
+            }}
+          >
+            {fedBadge}
+          </span>
+        )}
 
         {/* Scores row */}
         <div className="flex items-center gap-3 mt-1">

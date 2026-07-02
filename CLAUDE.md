@@ -125,21 +125,25 @@ Source scrapers: `scripts/sources/` package.
 ## Automation workflows (GitHub Actions)
 
 1. `ingest.yml` — cron 2–4h: RSS + GDELT + sports API → `news_articles`, `event_results`
-2. `process.yml` — daily 06:00: LLM summaries + tagging + `talent_score` update; auto-creates `athletes` records (see Auto-discovery filters above)
-3. `backup.yml` — weekly: `pg_dump` → GitHub Releases or Cloudflare R2
-4. `social_discovery.yml` — weekly: Instagram handle discovery + Brand Fit Score via LLM + Apify
-5. `ingest_federations.yml` — monthly 1st at 05:00 UTC: PZA + PZKol MTB + PZM Motocross → `athletes` + `federation_profiles`
+2. `process.yml` — twice daily 06:00 + 18:00: LLM summaries + tagging (batch `PROCESS_BATCH_SIZE`, default 120); auto-creates `athletes` records (see Auto-discovery filters above)
+3. `compute.yml` — daily 07:00: `compute_talent_score.py` → `talent_score` + `talent_score_history` (logs to `ingestion_runs` as `compute_scores`)
+4. `backup.yml` — weekly: `pg_dump` → GitHub Releases or Cloudflare R2
+5. `social_discovery.yml` — weekly: Instagram handle discovery + Brand Fit Score via LLM + Apify
+6. `ingest_federations.yml` — monthly 1st at 05:00 UTC: PZA + PZKol MTB + PZM Motocross → `athletes` + `federation_profiles`
 
 ## Talent Score algorithm
 
-Weighted sum of:
-- (a) Age <23 (younger = higher)
-- (b) Recent breakthrough detected by LLM (debut / podium / record)
-- (c) Mention spike across multiple sources (from `news_articles`)
-- (d) Social signal (engagement spike from `social_signals`)
-- (e) Discipline gap multiplier from `discipline_gaps` (undercovered discipline = higher weight)
+`scripts/compute_talent_score.py` — bulk-fetches all data upfront (no per-athlete queries), skips `discovery_status='rejected'`. Weighted sum, max 100:
+- (a) `age_factor` 0–25 — younger = higher; when `birth_date` is missing, falls back to federation `ranking_category` age band (u13/u15/u17/mx65/mx85 → 25, junior/mx_junior → 22, masters/cyklosport → 5)
+- (b) `federation_rank_factor` 0–15 — best `ranking_position` across `federation_profiles` (#1 → 15, top3 → 12, top5 → 9, top10 → 6, ranked → 3)
+- (c) `mention_spike_factor` 0–20 — log scale of tagged articles last 30d
+- (d) `sentiment_factor` 0–15 — positive vs negative ratio (neutral 7.5 when no articles)
+- (e) `social_signal_factor` 0–15 — engagement spike from `social_signals`
+- (f) `breakthrough_factor` 0–10 — LLM-detected debut/podium/record/title last 90d
+- × `discipline_gap_multiplier` 1.0–1.5 from `discipline_gaps.priority_score` (1.25 default when discipline unseeded)
 
 Breakdown stored in `talent_score_history.factors` jsonb — shown in UI so score isn't a black box.
+Note: supabase-py uses snake_case (`maybe_single()`, not `maybeSingle()`).
 
 ## Budget
 
@@ -148,8 +152,8 @@ Breakdown stored in `talent_score_history.factors` jsonb — shown in UI so scor
 ## Roadmap
 
 - [x] Week 1–2: Next.js skeleton + Supabase schema + UI navigation scaffolding
-- [ ] Week 3–4: LLM layer (summaries + tagging), first talent_score, basic Athlete Hub with real data
-- [ ] Week 5–6: Gap Analysis Heatmap, Breakout Radar, seed redbull_roster + discipline_gaps
+- [x] Week 3–4: LLM layer (summaries + tagging), first talent_score, basic Athlete Hub with real data
+- [x] Week 5–6: Gap Analysis Heatmap, Breakout Radar, seed redbull_roster + discipline_gaps
 - [ ] Week 7+: Scout Notes, athlete comparison, admin/pipeline panel, social signals via Apify
 
 ## Env vars

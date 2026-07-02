@@ -111,6 +111,10 @@ def _parse_pdf_2024(content: bytes) -> list[FederationAthlete]:
                 m = _PDF_ROW_RE.match(line)
                 if m:
                     pos_str, firstname, lastname, club, points_str = m.groups()
+                    # Strip trailing per-round "position score" number pairs from the
+                    # club field (e.g. "KS Skarpa Bytom 17 205 6 495 1 1000").
+                    # Requires >=2 trailing numbers so club-name years survive.
+                    club = re.sub(r"(\s+\d{1,4}){2,}$", "", club.strip())
                     full_name = f"{firstname} {lastname}"
                     athletes.append(FederationAthlete(
                         federation=FEDERATION,

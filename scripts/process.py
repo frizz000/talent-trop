@@ -6,8 +6,8 @@ Process untagged news_articles with Claude Haiku:
   - sentiment
   - athlete link attempt
 
-Runs daily at 06:00 UTC via GitHub Actions (process.yml).
-Processes max 50 articles per run to stay within budget.
+Runs twice daily (06:00 / 18:00 UTC) via GitHub Actions (process.yml).
+Processes max PROCESS_BATCH_SIZE articles per run (default 120) to stay within budget.
 """
 
 import json
@@ -21,7 +21,7 @@ import requests
 from bs4 import BeautifulSoup
 from supabase import create_client, Client
 
-BATCH_SIZE = 50
+BATCH_SIZE = int(os.environ.get("PROCESS_BATCH_SIZE", "120"))
 HAIKU_MODEL = "claude-haiku-4-5-20251001"
 
 DISCIPLINES = (

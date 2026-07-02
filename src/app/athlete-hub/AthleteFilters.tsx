@@ -3,20 +3,12 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
-const DISCIPLINES = [
-  "skateboarding",
-  "snowboarding",
-  "freestyle skiing",
-  "mountain biking",
-  "BMX",
-  "surfing",
-  "rock climbing",
-  "motocross",
-  "trail running",
-  "athletics",
-  "cycling",
-  "extreme sports",
-];
+// Friendly labels for raw discipline values coming from the DB
+const DISCIPLINE_LABELS: Record<string, string> = {
+  mtb_xco: "MTB XCO",
+  motocross: "Motocross",
+  bouldering: "Bouldering",
+};
 
 const RED_BULL_STATUSES = [
   { value: "unsigned", label: "Bez dealu" },
@@ -31,6 +23,13 @@ const DISCOVERY_OPTIONS = [
   { value: "rejected",     label: "Odrzuceni" },
 ];
 
+const AGE_OPTIONS = [
+  { value: "u16", label: "U16 (do 15 lat)" },
+  { value: "u18", label: "U18 (do 17 lat)" },
+  { value: "u21", label: "U21 (do 20 lat)" },
+  { value: "u23", label: "U23 (do 22 lat)" },
+];
+
 const SORT_OPTIONS = [
   { value: "talent_score", label: "Talent Score ↓" },
   { value: "name",         label: "Imię A–Z" },
@@ -42,6 +41,8 @@ interface AthleteFiltersProps {
   red_bull_status?: string;
   sort?: string;
   discovery_status?: string;
+  age?: string;
+  disciplines: string[];
   total: number;
 }
 
@@ -50,6 +51,8 @@ export function AthleteFilters({
   red_bull_status,
   sort,
   discovery_status,
+  age,
+  disciplines,
   total,
 }: AthleteFiltersProps) {
   const router = useRouter();
@@ -69,7 +72,7 @@ export function AthleteFilters({
     [pathname, router, searchParams]
   );
 
-  const hasFilters = !!(discipline || red_bull_status || discovery_status);
+  const hasFilters = !!(discipline || red_bull_status || discovery_status || age);
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -87,8 +90,27 @@ export function AthleteFilters({
         }}
       >
         <option value="">Dyscyplina</option>
-        {DISCIPLINES.map((d) => (
-          <option key={d} value={d}>{d}</option>
+        {disciplines.map((d) => (
+          <option key={d} value={d}>{DISCIPLINE_LABELS[d] ?? d}</option>
+        ))}
+      </select>
+
+      {/* Age category */}
+      <select
+        value={age ?? ""}
+        onChange={(e) => setParam("age", e.target.value || null)}
+        className="text-xs px-3 py-1.5 outline-none cursor-pointer"
+        style={{
+          backgroundColor: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
+          color: age ? "var(--color-trend-up)" : "var(--color-muted)",
+          borderRadius: "8px",
+          fontFamily: "var(--font-body)",
+        }}
+      >
+        <option value="">Wiek</option>
+        {AGE_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
 
