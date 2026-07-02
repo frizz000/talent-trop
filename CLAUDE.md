@@ -110,7 +110,7 @@ Source scrapers: `scripts/sources/` package.
 
 | Source | Federation | Disciplines | URL | Method | `nationality_confirmed` |
 |---|---|---|---|---|---|
-| PZA Climbing | `pza` | bouldering / lead / speed | PDF 2024: `pza.org.pl/wp-content/uploads/2024/12/rankingi-PP-se.pdf`; Sheet 2025: Google Sheets gviz CSV | pdfplumber + CSV | `True` — PZA license |
+| PZA Climbing | `pza` | bouldering / lead / speed | PDF 2024: `pza.org.pl/wp-content/uploads/2024/12/rankingi-PP-se.pdf`; Sheet 2025: Google Sheets gviz CSV, **one tab per age category** (senior / u23 / junior / u18 / u16 — gids hardcoded in `SHEET_2025_TABS`) | pdfplumber + CSV | `True` — PZA license |
 | PZKol MTB XCO | `pzkol_mtb` | mtb_xco | `pzkol.pl/pobierz/12489/...` (34-page PDF, 14 age categories) | pdfplumber | `True` — PZKol license |
 | PZM Motocross | `pzm_motocross` | motocross | `wyniki.motoresults.pl/en/2025/Motocross/AMIC/` (10 AMIC categories) | BeautifulSoup + Claude Haiku filter | `False` — LLM-filtered |
 
@@ -128,8 +128,9 @@ Source scrapers: `scripts/sources/` package.
 2. `process.yml` — twice daily 06:00 + 18:00: LLM summaries + tagging (batch `PROCESS_BATCH_SIZE`, default 120); auto-creates `athletes` records (see Auto-discovery filters above)
 3. `compute.yml` — daily 07:00: `compute_talent_score.py` → `talent_score` + `talent_score_history` (logs to `ingestion_runs` as `compute_scores`)
 4. `backup.yml` — weekly: `pg_dump` → GitHub Releases or Cloudflare R2
-5. `social_discovery.yml` — weekly: Instagram handle discovery + Brand Fit Score via LLM + Apify
+5. `social_discovery.yml` — weekly Mon 08:00: IG handle discovery via **Google CSE** (skipped when `GOOGLE_CSE_API_KEY`/`GOOGLE_CSE_CX` unset — no LLM handle guessing) + optional Apify validation (`APIFY_API_TOKEN`) + Brand Fit Score via Haiku for top `BRAND_FIT_LIMIT` (150) prospects, recomputed after `BRAND_FIT_MAX_AGE_DAYS` (14)
 6. `ingest_federations.yml` — monthly 1st at 05:00 UTC: PZA + PZKol MTB + PZM Motocross → `athletes` + `federation_profiles`
+7. `ingest_events.yml` — weekly Mon 04:00: PZA + PZKol event calendars → `events` (script `ingest_events.py`, dedup by name+start_date in-script)
 
 ## Talent Score algorithm
 

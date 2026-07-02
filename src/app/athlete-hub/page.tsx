@@ -28,11 +28,45 @@ const AGE_FILTERS: Record<string, number> = {
   u23: 23,
 };
 
+// Federation age-category prefixes matching each filter — catches athletes
+// whose only age signal is their federation category (no birth_date on record)
+const AGE_CATEGORY_PREFIXES: Record<string, string[]> = {
+  u16: ["u13", "u14", "u15", "u16", "mx65", "mx85"],
+  u18: ["u13", "u14", "u15", "u16", "u17", "u18", "mx65", "mx85"],
+  u21: ["u13", "u14", "u15", "u16", "u17", "u18", "junior", "mx65", "mx85", "mx_junior"],
+  u23: ["u13", "u14", "u15", "u16", "u17", "u18", "u23", "junior", "mx65", "mx85", "mx_junior"],
+};
+
 function birthDateCutoff(maxAge: number): string {
   const d = new Date();
   d.setFullYear(d.getFullYear() - maxAge);
   return d.toISOString().slice(0, 10);
 }
+
+const ATHLETE_COLUMNS =
+  "id,name,discipline,birth_date,talent_score,red_bull_status,social_status,discovery_status,photo_url,bio_summary,created_at";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function applyCommonFilters(
+  query: any,
+  discipline?: string,
+  red_bull_status?: string,
+  discovery_status?: string,
+) {
+  if (discipline) query = query.eq("discipline", discipline);
+  if (red_bull_status) query = query.eq("red_bull_status", red_bull_status);
+
+  if (discovery_status === "confirmed") {
+    query = query.in("discovery_status", ["confirmed", "manual"]);
+  } else if (discovery_status) {
+    query = query.eq("discovery_status", discovery_status);
+  } else {
+    // Default: hide rejected
+    query = query.neq("discovery_status", "rejected");
+  }
+  return query;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 async function fetchAthletes(
   discipline?: string,
@@ -44,29 +78,16 @@ async function fetchAthletes(
   if (!isSupabaseConfigured()) return [];
 
   const supabase = await createClient();
+  const ascending = sort === "name";
+
   let query = supabase
     .from("athletes")
-    .select(
-      "id,name,discipline,birth_date,talent_score,red_bull_status,social_status,discovery_status,photo_url,bio_summary,created_at,federation_profiles(federation,ranking_category,ranking_position)"
-    )
+    .select(`${ATHLETE_COLUMNS},federation_profiles(federation,ranking_category,ranking_position)`)
     .limit(60);
-
-  if (discipline) query = query.eq("discipline", discipline);
-  if (red_bull_status) query = query.eq("red_bull_status", red_bull_status);
+  query = applyCommonFilters(query, discipline, red_bull_status, discovery_status);
   if (age && AGE_FILTERS[age]) {
     query = query.gte("birth_date", birthDateCutoff(AGE_FILTERS[age]));
   }
-
-  if (discovery_status === "confirmed") {
-    query = query.in("discovery_status", ["confirmed", "manual"]);
-  } else if (discovery_status) {
-    query = query.eq("discovery_status", discovery_status);
-  } else {
-    // Default: hide rejected
-    query = query.neq("discovery_status", "rejected");
-  }
-
-  const ascending = sort === "name";
   query = query.order(sort, { ascending, nullsFirst: false });
 
   const { data, error } = await query;
@@ -74,7 +95,45 @@ async function fetchAthletes(
     console.error("athletes:", error.message);
     return [];
   }
-  return (data ?? []) as Athlete[];
+  let athletes = (data ?? []) as Athlete[];
+
+  // Age filter, part 2: athletes without birth_date whose federation age
+  // category matches (e.g. PZA "u16_men_bouldering" entries have no birth year)
+  if (age && AGE_CATEGORY_PREFIXES[age]) {
+    const orExpr = AGE_CATEGORY_PREFIXES[age]
+      .map((p) => `ranking_category.like.${p}*`)
+      .join(",");
+    let catQuery = supabase
+      .from("athletes")
+      .select(
+        `${ATHLETE_COLUMNS},federation_profiles!inner(federation,ranking_category,ranking_position)`
+      )
+      .is("birth_date", null)
+      .or(orExpr, { referencedTable: "federation_profiles" })
+      .limit(60);
+    catQuery = applyCommonFilters(catQuery, discipline, red_bull_status, discovery_status);
+    catQuery = catQuery.order(sort, { ascending, nullsFirst: false });
+
+    const { data: catData, error: catError } = await catQuery;
+    if (catError) {
+      console.error("athletes by category:", catError.message);
+    } else if (catData) {
+      const seen = new Set(athletes.map((a) => a.id));
+      for (const a of catData as Athlete[]) {
+        if (!seen.has(a.id)) athletes.push(a);
+      }
+      athletes = athletes
+        .sort((a, b) => {
+          if (sort === "name") return a.name.localeCompare(b.name);
+          const av = sort === "talent_score" ? a.talent_score ?? -1 : Date.parse(a.created_at);
+          const bv = sort === "talent_score" ? b.talent_score ?? -1 : Date.parse(b.created_at);
+          return bv - av;
+        })
+        .slice(0, 60);
+    }
+  }
+
+  return athletes;
 }
 
 async function fetchDisciplines(): Promise<string[]> {

@@ -85,6 +85,50 @@ async function fetchBreakouts(windowDays: number): Promise<AthleteWithDelta[]> {
     .sort((a, b) => b.delta - a.delta);
 }
 
+type BreakthroughArticle = {
+  id: string;
+  title: string;
+  url: string;
+  source: string;
+  published_at: string;
+  breakthrough_type: string | null;
+  summary: string | null;
+  athletes: {
+    id: string;
+    name: string;
+    discipline: string;
+    talent_score: number | null;
+  } | null;
+};
+
+async function fetchBreakthroughs(windowDays: number): Promise<BreakthroughArticle[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = await createClient();
+  const cutoff = new Date(
+    Date.now() - windowDays * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const { data } = await supabase
+    .from("news_articles")
+    .select(
+      "id, title, url, source, published_at, breakthrough_type, summary, athletes(id, name, discipline, talent_score)"
+    )
+    .eq("is_breakthrough", true)
+    .gte("published_at", cutoff)
+    .order("published_at", { ascending: false })
+    .limit(20);
+
+  return (data ?? []) as unknown as BreakthroughArticle[];
+}
+
+const BREAKTHROUGH_LABELS: Record<string, string> = {
+  debut: "DEBIUT",
+  podium: "PODIUM",
+  record: "REKORD",
+  title: "TYTUŁ",
+};
+
 function DeltaBadge({ delta }: { delta: number }) {
   const positive = delta >= 0;
   return (
@@ -235,10 +279,86 @@ function CompactRow({
   );
 }
 
-async function BreakoutContent({ windowDays }: { windowDays: number }) {
-  const athletes = await fetchBreakouts(windowDays);
+function BreakthroughFeed({ articles }: { articles: BreakthroughArticle[] }) {
+  if (articles.length === 0) return null;
 
-  if (athletes.length === 0) {
+  return (
+    <div className="card overflow-hidden mb-8">
+      <div
+        className="px-4 py-3"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
+      >
+        <h2
+          className="text-xs uppercase tracking-wider stat"
+          style={{ color: "var(--color-accent)" }}
+        >
+          🔥 Sygnały przełomu z newsów (LLM)
+        </h2>
+      </div>
+      {articles.map((a) => (
+        <div
+          key={a.id}
+          className="flex items-start gap-4 py-3 px-4"
+          style={{ borderBottom: "1px solid var(--color-border)" }}
+        >
+          <span
+            className="stat text-xs font-bold px-2 py-0.5 shrink-0 mt-0.5"
+            style={{
+              backgroundColor: "var(--color-accent)22",
+              color: "var(--color-accent)",
+              border: "1px solid var(--color-accent)44",
+              borderRadius: "4px",
+            }}
+          >
+            {BREAKTHROUGH_LABELS[a.breakthrough_type ?? ""] ?? "PRZEŁOM"}
+          </span>
+          <div className="flex-1 min-w-0">
+            <a
+              href={a.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover-underline text-sm font-medium leading-snug"
+              style={{ color: "var(--color-text)", textDecoration: "none" }}
+            >
+              {a.title}
+            </a>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className="stat text-xs" style={{ color: "var(--color-muted)" }}>
+                {a.source}
+              </span>
+              <span className="stat text-xs" style={{ color: "var(--color-muted)" }}>
+                {new Date(a.published_at).toLocaleDateString("pl-PL")}
+              </span>
+              {a.athletes && (
+                <Link
+                  href={`/athlete-hub/${a.athletes.id}`}
+                  className="text-xs font-bold uppercase"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    color: "var(--color-trend-up)",
+                    textDecoration: "none",
+                  }}
+                >
+                  → {a.athletes.name}
+                  {a.athletes.talent_score != null &&
+                    ` (${Number(a.athletes.talent_score).toFixed(0)})`}
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+async function BreakoutContent({ windowDays }: { windowDays: number }) {
+  const [athletes, breakthroughs] = await Promise.all([
+    fetchBreakouts(windowDays),
+    fetchBreakthroughs(windowDays),
+  ]);
+
+  if (athletes.length === 0 && breakthroughs.length === 0) {
     return (
       <div className="card p-8 max-w-lg">
         <p className="stat text-xs mb-2" style={{ color: "var(--color-muted)" }}>
@@ -258,31 +378,48 @@ async function BreakoutContent({ windowDays }: { windowDays: number }) {
 
   return (
     <div>
-      {/* Top 3 hero cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {heroes.map((a) => (
-          <HeroCard key={a.id} athlete={a} />
-        ))}
-      </div>
+      {/* Breakthrough signals from news — available from day one */}
+      <BreakthroughFeed articles={breakthroughs} />
 
-      {/* Rest: compact list */}
-      {rest.length > 0 && (
-        <div className="card overflow-hidden">
-          <div
-            className="px-4 py-3"
-            style={{ borderBottom: "1px solid var(--color-border)" }}
-          >
-            <h2
-              className="text-xs uppercase tracking-wider stat"
-              style={{ color: "var(--color-muted)" }}
-            >
-              Pozostałe ({rest.length})
-            </h2>
-          </div>
-          {rest.map((a, i) => (
-            <CompactRow key={a.id} athlete={a} rank={i + 4} />
-          ))}
+      {athletes.length === 0 ? (
+        <div className="card p-6 max-w-lg">
+          <p className="stat text-xs mb-2" style={{ color: "var(--color-muted)" }}>
+            ZMIANY SCORE — W PRZYGOTOWANIU
+          </p>
+          <p className="text-sm" style={{ color: "var(--color-muted)" }}>
+            Ranking zmian talent score pojawi się po co najmniej dwóch dziennych
+            przeliczeniach (workflow compute.yml, codziennie 07:00 UTC).
+          </p>
         </div>
+      ) : (
+        <>
+          {/* Top 3 hero cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            {heroes.map((a) => (
+              <HeroCard key={a.id} athlete={a} />
+            ))}
+          </div>
+
+          {/* Rest: compact list */}
+          {rest.length > 0 && (
+            <div className="card overflow-hidden">
+              <div
+                className="px-4 py-3"
+                style={{ borderBottom: "1px solid var(--color-border)" }}
+              >
+                <h2
+                  className="text-xs uppercase tracking-wider stat"
+                  style={{ color: "var(--color-muted)" }}
+                >
+                  Pozostałe ({rest.length})
+                </h2>
+              </div>
+              {rest.map((a, i) => (
+                <CompactRow key={a.id} athlete={a} rank={i + 4} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

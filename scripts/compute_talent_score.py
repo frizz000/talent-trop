@@ -39,16 +39,24 @@ PAGE_SIZE = 1000
 HISTORY_INSERT_BATCH = 500
 ATHLETE_UPDATE_BATCH = 500
 
-# Federation ranking_category → assumed age band when birth_date is missing.
+# Federation ranking_category prefix → assumed age band when birth_date is missing.
 # Youth categories are the core scouting target (14–17), so they score max.
-CATEGORY_AGE_POINTS = {
-    "u13_men": 25.0, "u13_women": 25.0,
-    "u15_men": 25.0, "u15_women": 25.0,
-    "u17_men": 25.0, "u17_women": 25.0,
-    "junior_men": 22.0, "junior_women": 22.0,
-    "mx65": 25.0, "mx85": 25.0, "mx_junior": 22.0,
-    "masters_m30": 5.0, "masters_m40": 5.0, "cyklosport_men": 5.0,
-}
+# Prefix match covers per-discipline variants (e.g. u16_women_bouldering).
+CATEGORY_AGE_PREFIXES = [
+    ("u13", 25.0), ("u14", 25.0), ("u15", 25.0), ("u16", 25.0), ("u17", 25.0),
+    ("u18", 25.0),
+    ("junior", 22.0),
+    ("u23", 18.0),
+    ("mx65", 25.0), ("mx85", 25.0), ("mx_junior", 22.0),
+    ("masters", 5.0), ("cyklosport", 5.0),
+]
+
+
+def category_age_points(category: str) -> float | None:
+    for prefix, points in CATEGORY_AGE_PREFIXES:
+        if category.startswith(prefix):
+            return points
+    return None
 
 
 def fetch_all(table: str, columns: str, filters=None) -> list[dict]:
@@ -71,7 +79,7 @@ def age_factor(birth_date_str: str | None, categories: set[str]) -> float:
     """Younger athletes score higher. Max 25 pts."""
     if not birth_date_str:
         # No birth date — estimate from federation age category if available
-        cat_points = [CATEGORY_AGE_POINTS[c] for c in categories if c in CATEGORY_AGE_POINTS]
+        cat_points = [p for p in (category_age_points(c) for c in categories) if p is not None]
         if cat_points:
             return max(cat_points)
         return 10.0

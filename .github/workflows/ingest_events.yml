@@ -1,15 +1,15 @@
-name: Social Discovery & Brand Fit
+name: Ingest Federation Event Calendars
 
 on:
   schedule:
-    - cron: "0 8 * * 1"   # Monday 08:00 UTC (weekly)
+    - cron: "0 4 * * 1"   # Monday 04:00 UTC (weekly)
   workflow_dispatch:
 
 jobs:
-  social_discovery:
-    name: Discover social profiles + compute brand fit
+  ingest_events:
+    name: Ingest PZA + PZKol event calendars
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -23,12 +23,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Run social discovery
+      - name: Run events ingest
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
-          GOOGLE_CSE_API_KEY: ${{ secrets.GOOGLE_CSE_API_KEY }}
-          GOOGLE_CSE_CX: ${{ secrets.GOOGLE_CSE_CX }}
-        run: python scripts/social_discovery.py
+        run: python scripts/ingest_events.py

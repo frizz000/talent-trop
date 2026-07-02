@@ -27,12 +27,31 @@ FEDERATION = "pza"
 # 2024 senior ranking PDF
 PDF_2024_URL = "https://pza.org.pl/wp-content/uploads/2024/12/rankingi-PP-se.pdf"
 
-# 2025 Google Sheet (gviz CSV export — works for public sheets)
+# 2025 Google Sheet (gviz CSV export — works for public sheets).
+# One tab per age category; each tab holds three sections:
+# I. BOULDERING / II. PROWADZENIE / III. NA CZAS
 SHEET_2025_ID = "1awEI4hufZosohOHjYvBEDOLjCA9QRFDFBQ1C7jyrzL8"
-SHEET_2025_URL = (
-    f"https://docs.google.com/spreadsheets/d/{SHEET_2025_ID}"
-    "/gviz/tq?tqx=out:csv&gid=0"
-)
+
+# (tab label, gid, category base) — u16 = młodzik (14–15) is the core scouting target
+SHEET_2025_TABS = [
+    ("Seniorki",         "558643199",  "senior_women"),
+    ("Seniorzy",         "1888516028", "senior_men"),
+    ("Młodzieżowcy K",   "818673912",  "u23_women"),
+    ("Młodzieżowcy M",   "1731578676", "u23_men"),
+    ("juniorki",         "1589159308", "junior_women"),
+    ("juniorzy",         "976938634",  "junior_men"),
+    ("juniorki młodsze", "512298903",  "u18_women"),
+    ("juniorzy młodsi",  "1940627993", "u18_men"),
+    ("młodziczki",       "2087637623", "u16_women"),
+    ("młodzicy",         "1473897075", "u16_men"),
+]
+
+
+def _sheet_tab_url(gid: str) -> str:
+    return (
+        f"https://docs.google.com/spreadsheets/d/{SHEET_2025_ID}"
+        f"/gviz/tq?tqx=out:csv&gid={gid}"
+    )
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
@@ -134,18 +153,23 @@ def _parse_pdf_2024(content: bytes) -> list[FederationAthlete]:
 
 # ─── Google Sheet 2025 ───────────────────────────────────────────────────────
 
-_SHEET_HEADER_RE = re.compile(
-    r"(seniorki|seniorzy|panowie|panie).*(bouldering|prowadzenie|czas|lead|speed)",
-    re.IGNORECASE,
+# Discipline section markers inside each tab
+_SHEET_SECTION_RE = re.compile(
+    r"(I{1,3})\.\s*(BOULDERING|PROWADZENIE|NA CZAS)", re.IGNORECASE
 )
+_SECTION_DISCIPLINE = {
+    "bouldering": "bouldering",
+    "prowadzenie": "lead",
+    "na czas": "speed",
+}
 
 
-def _parse_sheet_2025(csv_text: str) -> list[FederationAthlete]:
+def _parse_sheet_tab(csv_text: str, category_base: str) -> list[FederationAthlete]:
+    """Parse one age-category tab; rows carry a running discipline section."""
     athletes: list[FederationAthlete] = []
     reader = list(csv.reader(io.StringIO(csv_text)))
 
-    current_category = "senior_general"
-    current_discipline = "climbing"
+    current_discipline = "bouldering"  # section I opens every tab
 
     for row in reader:
         if not row:
@@ -153,32 +177,23 @@ def _parse_sheet_2025(csv_text: str) -> list[FederationAthlete]:
 
         # Clean whitespace and non-breaking spaces
         row = [cell.replace("\xa0", " ").strip() for cell in row]
+        full_text = " ".join(row)
+
+        m_sec = _SHEET_SECTION_RE.search(full_text)
+        if m_sec:
+            current_discipline = _SECTION_DISCIPLINE[m_sec.group(2).lower()]
+            continue
 
         first = row[0] if row else ""
-        rest = row[1:] if len(row) > 1 else []
-
-        # Detect section header from first column or full row text
-        full_text = " ".join(row)
-        m_sec = _SHEET_HEADER_RE.search(full_text)
-        if m_sec:
-            current_category, current_discipline = _category_from_header(full_text)
-            continue
-
-        # Skip header rows
-        if first == "" and rest and rest[0].lower() in ("imię", "imie", "name"):
-            continue
 
         # Athlete row: first column is a digit (position)
-        if not re.match(r"^\d+$", first):
-            continue
-
-        if len(row) < 4:
+        if not re.match(r"^\d+$", first) or len(row) < 4:
             continue
 
         pos = int(first)
-        firstname = row[1] if len(row) > 1 else ""
-        lastname = row[2] if len(row) > 2 else ""
-        club = row[3] if len(row) > 3 else ""
+        firstname = row[1]
+        lastname = row[2]
+        club = row[3]
 
         # Total points: last non-empty numeric cell
         points = None
@@ -191,11 +206,10 @@ def _parse_sheet_2025(csv_text: str) -> list[FederationAthlete]:
         if not firstname or not lastname:
             continue
 
-        full_name = f"{firstname} {lastname}"
         athletes.append(FederationAthlete(
             federation=FEDERATION,
-            external_name=full_name,
-            ranking_category=current_category,
+            external_name=_title(f"{firstname} {lastname}"),
+            ranking_category=f"{category_base}_{current_discipline}",
             season="2025",
             discipline=current_discipline,
             ranking_position=pos,
@@ -224,16 +238,16 @@ def fetch() -> list[FederationAthlete]:
     except Exception as e:
         print(f"    [ERR] 2024 PDF: {e}")
 
-    time.sleep(0.5)
-
-    # 2025 Google Sheet
-    print("  [pza] Downloading 2025 season sheet...")
-    try:
-        resp = safe_get(SHEET_2025_URL)
-        found = _parse_sheet_2025(resp.text)
-        print(f"    → {len(found)} athletes parsed from 2025 sheet")
-        athletes.extend(found)
-    except Exception as e:
-        print(f"    [ERR] 2025 sheet: {e}")
+    # 2025 Google Sheet — one tab per age category (seniors down to U16)
+    for label, gid, category_base in SHEET_2025_TABS:
+        time.sleep(0.5)
+        print(f"  [pza] Downloading 2025 sheet tab '{label}' ({category_base})...")
+        try:
+            resp = safe_get(_sheet_tab_url(gid))
+            found = _parse_sheet_tab(resp.text, category_base)
+            print(f"    → {len(found)} athletes")
+            athletes.extend(found)
+        except Exception as e:
+            print(f"    [ERR] tab {label}: {e}")
 
     return athletes

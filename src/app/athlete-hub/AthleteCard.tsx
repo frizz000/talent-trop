@@ -28,15 +28,19 @@ const FEDERATION_LABELS: Record<string, string> = {
   pzm_motocross: "PZM",
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  u13_men: "U13", u13_women: "U13",
-  u15_men: "U15", u15_women: "U15",
-  u17_men: "U17", u17_women: "U17",
-  junior_men: "Junior", junior_women: "Junior",
-  elite_men: "Elita", elite_women: "Elita",
-  senior_men_bouldering: "Senior", senior_women_bouldering: "Senior",
-  mx65: "MX65", mx85: "MX85", mx_junior: "MX Junior",
-};
+// Prefix-based so per-discipline variants (u16_women_bouldering) resolve too
+const CATEGORY_LABEL_PREFIXES: [string, string][] = [
+  ["u13", "U13"], ["u14", "U14"], ["u15", "U15"], ["u16", "U16"],
+  ["u17", "U17"], ["u18", "U18"], ["u23", "U23"],
+  ["mx_junior", "MX Junior"], ["mx65", "MX65"], ["mx85", "MX85"],
+  ["junior", "Junior"], ["elite", "Elita"], ["senior", "Senior"],
+  ["masters", "Masters"],
+];
+
+function categoryLabel(category: string): string {
+  const match = CATEGORY_LABEL_PREFIXES.find(([p]) => category.startsWith(p));
+  return match ? match[1] : category;
+}
 
 function ageFromBirthDate(birthDate: string): number {
   return Math.floor(
@@ -50,9 +54,7 @@ function bestFederationBadge(profiles?: FederationProfile[]): string | null {
     (a, b) => (a.ranking_position ?? 999) - (b.ranking_position ?? 999)
   )[0];
   const fed = FEDERATION_LABELS[best.federation] ?? best.federation.toUpperCase();
-  const cat = best.ranking_category
-    ? CATEGORY_LABELS[best.ranking_category] ?? best.ranking_category
-    : null;
+  const cat = best.ranking_category ? categoryLabel(best.ranking_category) : null;
   const pos = best.ranking_position != null ? `#${best.ranking_position}` : null;
   return [fed, cat, pos].filter(Boolean).join(" ");
 }
