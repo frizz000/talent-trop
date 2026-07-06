@@ -113,10 +113,16 @@ Source scrapers: `scripts/sources/` package.
 | PZA Climbing | `pza` | bouldering / lead / speed | PDF 2024: `pza.org.pl/wp-content/uploads/2024/12/rankingi-PP-se.pdf`; Sheet 2025: Google Sheets gviz CSV, **one tab per age category** (senior / u23 / junior / u18 / u16 — gids hardcoded in `SHEET_2025_TABS`) | pdfplumber + CSV | `True` — PZA license |
 | PZKol MTB XCO | `pzkol_mtb` | mtb_xco | `pzkol.pl/pobierz/12489/...` (34-page PDF, 14 age categories) | pdfplumber | `True` — PZKol license |
 | PZM Motocross | `pzm_motocross` | motocross | `wyniki.motoresults.pl/en/2025/Motocross/AMIC/` (10 AMIC categories) | BeautifulSoup + Claude Haiku filter | `False` — LLM-filtered |
+| PZLA Athletics | `pzla` | athletics | `statystyka.pzla.pl/stat.php` — season leaders per event, U16/U18/U20 × M/K, top 12/event. **Season format `2025L` (summer) / `2026Z` (indoor)** — plain year returns empty. Current season can 500 before PZLA generates it → auto-fallback to previous. `verify=False` (broken cert) | BeautifulSoup | `True` — PZLA license |
+| FIS Ski/Snowboard | `fis` | alpine_skiing / snowboarding / freestyle_ski | `data.fis-ski.com/fis_athletes/ajax/fispointslistfunctions/export_fispointslist.html` (legacy endpoint, survives the Next.js redesign). Latest listid found by upward probing from floor 440; empty `listid` = season Base List. Sector CC broken server-side; JP/NK have no points lists | CSV, filter `Nationcode=POL` | `True` — FIS registration for POL |
+| IFSC World Ranking | `ifsc` | bouldering / lead / speed | `ifsc.results.info/api/v1/cuwr/{dcat}` (dcat 1-3,5-7), **requires `Referer: https://ifsc.results.info/`** | JSON, filter `country=POL` | `True` — competes for POL |
+| Speed Skating ISU | `speed_skating_isu` | speed_skating | `speedskatingresults.com/api/json/topn.php` — national top-50 per distance (500–10000 m). Age category (C/B/A/N) enriched from `skater_lookup.php`, which caps at 20 rows/query → recursive familyname-prefix enumeration. Season param = start year (Nov) | JSON | `True` — POL in ISU archive |
 
 **Discovery status from federation sources:**
-- `pza` / `pzkol_mtb` → `confirmed` (license = Polish, no LLM needed)
+- `pza` / `pzkol_mtb` / `pzla` / `fis` / `ifsc` / `speed_skating_isu` → `confirmed` (license/registration = Polish, no LLM needed)
 - `pzm_motocross` → `auto_detected` (LLM nationality filter, requires scout review)
+
+**Blocked sources (tried 2026-07-06):** swimrankings.net i procyclingstats.com — Cloudflare 403 na wszystkie żądania bez przeglądarki; UCI DataRide — ASP.NET WebForms z VIEWSTATE, wymaga sesji przeglądarkowej.
 
 **Fuzzy name matching:** `SequenceMatcher` threshold 0.85. Exact ilike first, then word-by-word fuzzy on first 2 words > 3 chars.
 
@@ -131,7 +137,7 @@ Source scrapers: `scripts/sources/` package.
 3. `compute.yml` — daily 07:00: `compute_talent_score.py` → `talent_score` + `talent_score_history` (logs to `ingestion_runs` as `compute_scores`)
 4. `backup.yml` — weekly: `pg_dump` → GitHub Releases or Cloudflare R2
 5. `social_discovery.yml` — weekly Mon 08:00: IG handle discovery via **Google CSE** (skipped when `GOOGLE_CSE_API_KEY`/`GOOGLE_CSE_CX` unset — no LLM handle guessing) + optional Apify validation (`APIFY_API_TOKEN`) + Brand Fit Score via Haiku for top `BRAND_FIT_LIMIT` (150) prospects, recomputed after `BRAND_FIT_MAX_AGE_DAYS` (14)
-6. `ingest_federations.yml` — monthly 1st at 05:00 UTC: PZA + PZKol MTB + PZM Motocross → `athletes` + `federation_profiles`
+6. `ingest_federations.yml` — **daily 05:00 UTC**: PZA + PZKol MTB + PZM Motocross + PZLA + FIS + IFSC + speed skating → `athletes` + `federation_profiles` (bulk writes: in-memory `AthleteIndex` + batched upserts, no per-row queries)
 7. `ingest_events.yml` — weekly Mon 04:00: PZA + PZKol event calendars → `events` (script `ingest_events.py`, dedup by name+start_date in-script)
 
 ## Talent Score algorithm

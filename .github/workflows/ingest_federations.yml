@@ -1,16 +1,17 @@
 name: Ingest Federation Data
 
 on:
-  # Run monthly on the 1st at 05:00 UTC (federation rankings update monthly)
+  # Run daily at 05:00 UTC — sources dedup via upsert, so frequent runs are safe;
+  # daily keeps rankings fresh during the season
   schedule:
-    - cron: "0 5 1 * *"
+    - cron: "0 5 * * *"
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
     inputs:
       sources:
-        description: "Comma-separated sources to run (pza,pzkol,pzm)"
+        description: "Comma-separated sources to run (pza,pzkol,pzm,pzla,fis,ifsc,speedskating)"
         required: false
-        default: "pza,pzkol,pzm"
+        default: "pza,pzkol,pzm,pzla,fis,ifsc,speedskating"
       dry_run:
         description: "Dry run (fetch only, skip DB writes)"
         type: boolean
@@ -42,6 +43,6 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          SOURCES="${{ github.event.inputs.sources || 'pza,pzkol,pzm' }}"
+          SOURCES="${{ github.event.inputs.sources || 'pza,pzkol,pzm,pzla,fis,ifsc,speedskating' }}"
           DRY_RUN="${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}"
           python3 scripts/ingest_federations.py --sources "$SOURCES" $DRY_RUN

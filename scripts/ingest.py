@@ -28,6 +28,12 @@ SOURCES = [
     {"name": "Interia Sport",      "url": "https://sport.interia.pl/rss/sport.xml",              "region": "poland"},
     {"name": "WP SportoweFakty",   "url": "https://sportowefakty.wp.pl/rss.xml",                "region": "poland"},
     {"name": "Przegląd Sportowy",  "url": "https://przegladsportowy.pl/feed",                   "region": "poland"},
+    # Polish — niche discipline media (verified 2026-07-06); crossnews.pl,
+    # swim.pl, ridemag.pl unreachable; snowboarding.pl feed empty
+    {"name": "Wspinanie.pl",       "url": "https://wspinanie.pl/feed/",                         "region": "poland"},
+    {"name": "NaSzosie.pl",        "url": "https://naszosie.pl/feed/",                          "region": "poland"},
+    {"name": "SkiJumping.pl",      "url": "https://www.skijumping.pl/rss",                      "region": "poland"},
+    {"name": "SpeedwayNews.pl",    "url": "https://speedwaynews.pl/feed/",                      "region": "poland"},
     # World
     {"name": "BBC Sport",          "url": "https://feeds.bbci.co.uk/sport/rss.xml",             "region": "world"},
     {"name": "ESPN",               "url": "https://www.espn.com/espn/rss/news",                 "region": "world"},

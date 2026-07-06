@@ -45,9 +45,12 @@ ATHLETE_UPDATE_BATCH = 500
 CATEGORY_AGE_PREFIXES = [
     ("u13", 25.0), ("u14", 25.0), ("u15", 25.0), ("u16", 25.0), ("u17", 25.0),
     ("u18", 25.0),
+    ("u20", 22.0),
     ("junior", 22.0),
     ("u23", 18.0),
     ("mx65", 25.0), ("mx85", 25.0), ("mx_junior", 22.0),
+    # ISU speed skating: C=13-14, B=15-16, A=17-18, N=neo-senior 19-22
+    ("cat_c", 25.0), ("cat_b", 25.0), ("cat_a", 25.0), ("cat_n", 18.0),
     ("masters", 5.0), ("cyklosport", 5.0),
 ]
 

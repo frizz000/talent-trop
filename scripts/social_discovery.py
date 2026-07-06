@@ -150,13 +150,34 @@ def validate_handle_apify(handle: str, token: str) -> dict | None:
     return None
 
 
+def _validate_cse_key(api_key: str, cx: str) -> str | None:
+    """One cheap probe query. Returns error message if the key is unusable."""
+    try:
+        resp = requests.get(
+            "https://www.googleapis.com/customsearch/v1",
+            params={"key": api_key, "cx": cx, "q": "test", "num": 1},
+            timeout=20,
+        )
+        if resp.status_code != 200:
+            detail = resp.json().get("error", {}).get("message", resp.text[:200])
+            return f"Google CSE key rejected (HTTP {resp.status_code}): {detail}"
+    except Exception as e:
+        return f"Google CSE probe failed: {e}"
+    return None
+
+
 def run_handle_discovery(sb: Client) -> tuple[int, list[str]]:
     """Discover IG handles for top prospects without a social profile."""
     api_key = os.environ.get("GOOGLE_CSE_API_KEY")
     cx = os.environ.get("GOOGLE_CSE_CX")
     if not api_key or not cx:
         print("\n[1/2] Handle discovery SKIPPED — GOOGLE_CSE_API_KEY / GOOGLE_CSE_CX not set.")
-        return 0, []
+        return 0, ["handle discovery skipped: GOOGLE_CSE_API_KEY / GOOGLE_CSE_CX not set"]
+
+    key_error = _validate_cse_key(api_key, cx)
+    if key_error:
+        print(f"\n[1/2] Handle discovery FAILED — {key_error}")
+        return 0, [key_error]
 
     apify_token = os.environ.get("APIFY_API_TOKEN") or os.environ.get("APIFY_API_KEY")
 
