@@ -44,7 +44,7 @@ BRAND_FIT_MAX_AGE_DAYS = int(os.environ.get("BRAND_FIT_MAX_AGE_DAYS", "14"))
 
 # Instagram accounts that are never an athlete's personal profile
 IG_HANDLE_BLOCKLIST = {
-    "p", "reel", "reels", "stories", "explore", "accounts", "tv",
+    "p", "reel", "reels", "stories", "explore", "accounts", "tv", "popular",
     "redbull", "redbullpol", "instagram",
 }
 
