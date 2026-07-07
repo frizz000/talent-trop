@@ -42,7 +42,7 @@ Jedno zadanie może wymagać sekwencyjnego przełączania się między rolami. R
 - Model: wyłącznie `claude-haiku-4-5-20251001` lub `gpt-4o-mini` — żadnych droższych modeli bez pytania
 - Batch size: max 50 artykułów/run; egzekwuj limity w kodzie, nie tylko w komentarzach
 - Nigdy nie przechowuj pełnego tekstu artykułów ani postów — tylko parafrazy LLM (kwestia prawna)
-- Hotlinkuj obrazki z źródła, nie kopiuj do Supabase Storage
+- Hotlinkuj obrazki z źródła, nie kopiuj do Supabase Storage — **wyjątek: avatary IG** (linki z CDN Meta wygasają po kilku dniach; `enrich_instagram_profiles.py` kopiuje je do bucketa `athlete-avatars`)
 - Auto-wykrywanie zawodników (`discovery_status='auto_detected'`): zawsze wymagaj `discovery_confidence >= 0.7` i filtr narodowości polskiej przed zapisem do bazy — pojedynczy sygnał z LLM nie wystarczy
 - Każdy run pipeline'u zapisuje rekord do `ingestion_runs` (status, liczniki, błędy)
 - Pracuj w obrębie 2000 min/month GitHub Actions — preferuj cron raz dziennie, nie na żądanie

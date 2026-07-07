@@ -33,7 +33,7 @@ Source of truth: `skaut_dashboard_architektura3.md` (full architecture brief).
 2. **news_articles** — ingested + LLM-processed articles. `region` enum (`poland`/`world`), `summary` is LLM paraphrase (never full text), `image_url` hotlinked from source
 3. **events** — competition calendar
 4. **event_results** — athlete placements at events
-5. **social_profiles** — IG/TikTok handles with confidence score + engagement metrics
+5. **social_profiles** — IG/TikTok handles with confidence score + engagement metrics. `enrichment_status` text+check (`pending`|`enriched`|`failed`, migration `0006`); `profile_pic_url` holds a **Supabase Storage URL** (bucket `athlete-avatars`), never the Instagram CDN URL (Meta links expire in days)
 6. **brand_fit_scores** — Red Bull brand fit score 0–100 with `factors` jsonb breakdown
 7. **talent_score_history** — time series of scores with `factors` jsonb breakdown
 8. **redbull_roster** — known Red Bull athletes (reference for gap analysis)
@@ -139,6 +139,7 @@ Source scrapers: `scripts/sources/` package.
 5. `social_discovery.yml` — weekly Mon 08:00: IG handle discovery via **Serper.dev** (`https://google.serper.dev/search`, POST z `X-API-KEY`; wyniki w polu `organic`; zastąpił Google CSE, które Google zamknął dla nowych klientów. Skipped when `SERPER_API_KEY` unset — no LLM handle guessing. Free tier 2500 zapytań jednorazowo, pipeline zużywa ~40/tydzień) + optional Apify validation (`APIFY_API_TOKEN`) + Brand Fit Score via Haiku for top `BRAND_FIT_LIMIT` (150) prospects, recomputed after `BRAND_FIT_MAX_AGE_DAYS` (14)
 6. `ingest_federations.yml` — **daily 05:00 UTC**: PZA + PZKol MTB + PZM Motocross + PZLA + FIS + IFSC + speed skating → `athletes` + `federation_profiles` (bulk writes: in-memory `AthleteIndex` + batched upserts, no per-row queries)
 7. `ingest_events.yml` — weekly Mon 04:00: PZA + PZKol event calendars → `events` (script `ingest_events.py`, dedup by name+start_date in-script)
+8. `instagram_enrichment.yml` — weekly Mon 10:00 (2h after social_discovery): `enrich_instagram_profiles.py` — one batched Apify `instagram-profile-scraper` run (async: start → poll → dataset) for pending `social_profiles` of confirmed/manual athletes (or auto_detected with confidence ≥ `ENRICH_MIN_CONFIDENCE` 0.6), max `ENRICH_LIMIT` (60)/run. Writes followers/posts/verified/private/bio/engagement_rate, re-hosts avatar in Storage bucket `athlete-avatars` (auto-created), fills `athletes.photo_url` when null. Per-profile failures → `enrichment_status='failed'`, batch failure leaves rows `pending`. Cost: $2.60/1000 results ≈ $0.16/week max — well within Apify's $5/month free credit
 
 ## Talent Score algorithm
 

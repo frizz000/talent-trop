@@ -133,20 +133,32 @@ darmowa pula starczy na ~rok.
 - [ ] Klucz Serper.dev utworzony i wpisany w `.env.local`
 - [ ] `SERPER_API_KEY` dodany jako GitHub Secret
 
-### 7b. Apify — walidacja kont IG + liczba followersów (opcjonalne, ale warto)
+### 7b. Apify — dane z Instagrama (followersi, bio, zdjęcia profilowe)
 
-Obecny token w `.env.local` jest **nieważny**.
+Token w `.env.local` jest już podmieniony i zweryfikowany (7 lipca 2026).
 
-1. Załóż konto na https://apify.com (darmowy plan = $5 kredytu/mies. — wystarczy)
-2. **Settings → Integrations → API tokens** → skopiuj token
-3. Podmień w `.env.local`: `APIFY_API_TOKEN=...`
-4. Dodaj GitHub Secret: `APIFY_API_TOKEN`
+Co robi integracja (workflow `Instagram Enrichment`, pon. 10:00 UTC — 2h po
+Social Discovery): dla znalezionych kont IG pobiera przez aktora
+`apify/instagram-profile-scraper` liczbę followersów, postów, bio, status
+weryfikacji/prywatności i **zdjęcie profilowe**. Zdjęcie jest kopiowane do
+Supabase Storage (bucket `athlete-avatars`) — linki z CDN Instagrama wygasają
+po kilku dniach, więc w bazie trzymamy link do Storage. Avatar pokazuje się
+w Athlete Hub zamiast inicjałów.
 
-- [ ] Token Apify podmieniony w `.env.local` i dodany jako Secret
+Koszt: aktor liczy $2.60 / 1000 profili (pay-per-result). Limit skryptu to 60
+profili/tydzień (`ENRICH_LIMIT`) = max ~$0.16/tydzień ≈ **$0.68/mies.** —
+darmowy kredyt $5/mies. wystarcza z dużym zapasem.
+
+1. ~~Załóż konto na https://apify.com~~ ✓
+2. ~~Podmień w `.env.local`: `APIFY_API_TOKEN=...`~~ ✓
+3. Dodaj GitHub Secret: `APIFY_API_TOKEN` (Settings → Secrets and variables → Actions)
+
+- [x] Token Apify podmieniony w `.env.local`
+- [ ] `APIFY_API_TOKEN` dodany jako GitHub Secret (bez tego workflow się pominie)
 
 ### 7c. Sprawdź, czy workflowy chodzą na zielono
 
-GitHub → zakładka **Actions**. Po ostatnich zmianach masz 7 workflowów:
+GitHub → zakładka **Actions**. Po ostatnich zmianach masz 8 workflowów:
 
 | Workflow | Harmonogram | Co robi |
 |---|---|---|
@@ -155,7 +167,8 @@ GitHub → zakładka **Actions**. Po ostatnich zmianach masz 7 workflowów:
 | Compute Talent Scores | 07:00 | przelicza talent score (zasila Breakout Radar) |
 | Ingest Federation Event Calendars | pon. 04:00 | kalendarz imprez PZA + PZKol |
 | Social Discovery & Brand Fit | pon. 08:00 | konta IG (po kroku 7a) + brand fit |
-| Ingest Federations | 1. dzień mies. | rankingi PZA/PZKol/PZM |
+| Instagram Enrichment | pon. 10:00 | followersi + avatary z IG przez Apify (krok 7b) |
+| Ingest Federations | codziennie 05:00 | rankingi PZA/PZKol/PZM/PZLA/FIS/IFSC/ISU |
 | Backup | co tydzień | kopia bazy |
 
 Jak któryś jest czerwony → kliknij → skopiuj log → wklej Claude'owi w sesji.

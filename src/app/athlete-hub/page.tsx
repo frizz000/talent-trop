@@ -82,7 +82,9 @@ async function fetchAthletes(
 
   let query = supabase
     .from("athletes")
-    .select(`${ATHLETE_COLUMNS},federation_profiles(federation,ranking_category,ranking_position)`)
+    .select(
+      `${ATHLETE_COLUMNS},federation_profiles(federation,ranking_category,ranking_position),social_profiles(profile_pic_url)`
+    )
     .limit(60);
   query = applyCommonFilters(query, discipline, red_bull_status, discovery_status);
   if (age && AGE_FILTERS[age]) {
@@ -106,7 +108,7 @@ async function fetchAthletes(
     let catQuery = supabase
       .from("athletes")
       .select(
-        `${ATHLETE_COLUMNS},federation_profiles!inner(federation,ranking_category,ranking_position)`
+        `${ATHLETE_COLUMNS},federation_profiles!inner(federation,ranking_category,ranking_position),social_profiles(profile_pic_url)`
       )
       .is("birth_date", null)
       .or(orExpr, { referencedTable: "federation_profiles" })

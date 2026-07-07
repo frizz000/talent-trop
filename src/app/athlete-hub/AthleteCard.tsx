@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { relativeTime } from "@/lib/utils";
 
@@ -5,6 +6,10 @@ export interface FederationProfile {
   federation: string;
   ranking_category: string | null;
   ranking_position: number | null;
+}
+
+export interface SocialProfile {
+  profile_pic_url: string | null;
 }
 
 export interface Athlete {
@@ -20,6 +25,11 @@ export interface Athlete {
   bio_summary?: string | null;
   created_at: string;
   federation_profiles?: FederationProfile[];
+  social_profiles?: SocialProfile[];
+}
+
+function isSupabaseStorageUrl(url: string): boolean {
+  return url.includes("/storage/v1/object/public/");
 }
 
 const FEDERATION_LABELS: Record<string, string> = {
@@ -100,6 +110,10 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
   const score = athlete.talent_score;
   const age = athlete.birth_date ? ageFromBirthDate(athlete.birth_date) : null;
   const fedBadge = bestFederationBadge(athlete.federation_profiles);
+  const avatarUrl =
+    athlete.photo_url ??
+    athlete.social_profiles?.find((p) => p.profile_pic_url)?.profile_pic_url ??
+    null;
 
   return (
     <Link href={`/athlete-hub/${athlete.id}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
@@ -107,11 +121,24 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
       className="card hover-border-accent overflow-hidden flex flex-col h-full"
     >
       {/* Photo / initials */}
-      <div style={{ height: "140px", backgroundColor: "var(--color-bg)" }}>
-        {athlete.photo_url ? (
+      <div
+        className="relative"
+        style={{ height: "140px", backgroundColor: "var(--color-bg)" }}
+      >
+        {avatarUrl && isSupabaseStorageUrl(avatarUrl) ? (
+          <Image
+            src={avatarUrl}
+            alt={athlete.name}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 20vw"
+            className="object-cover"
+          />
+        ) : avatarUrl ? (
+          // Arbitrary external hosts can't be allowlisted in next.config —
+          // fall back to a plain <img> for non-Storage photo URLs
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={athlete.photo_url}
+            src={avatarUrl}
             alt={athlete.name}
             className="w-full h-full object-cover"
           />
