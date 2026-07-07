@@ -55,7 +55,7 @@ function CoverageCell({ status, roster }: { status: string; roster: RosterEntry[
       }}
     >
       {cfg.label}
-      {named.map((r) => {
+      {named.slice(0, 3).map((r) => {
         const label = r.status === "ambassador" ? `${r.name} ✦` : r.name;
         const style = {
           display: "block",
@@ -71,23 +71,47 @@ function CoverageCell({ status, roster }: { status: string; roster: RosterEntry[
           marginLeft: "auto",
           marginRight: "auto",
         } as const;
-        return r.athlete_id ? (
-          <Link key={r.name} href={`/athlete-hub/${r.athlete_id}`} style={style} title="Profil w bazie">
+        if (r.athlete_id) {
+          return (
+            <Link key={r.name} href={`/athlete-hub/${r.athlete_id}`} style={style} title="Profil w bazie">
+              {label}
+            </Link>
+          );
+        }
+        if (r.source_url) {
+          return (
+            <a
+              key={r.name}
+              href={r.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={style}
+              title="Profil na redbull.com"
+            >
+              {label}
+            </a>
+          );
+        }
+        return (
+          <span key={r.name} style={{ ...style, borderBottom: "none" }}>
             {label}
-          </Link>
-        ) : (
-          <a
-            key={r.name}
-            href={r.source_url ?? "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={style}
-            title="Profil na redbull.com"
-          >
-            {label}
-          </a>
+          </span>
         );
       })}
+      {named.length > 3 && (
+        <span
+          style={{
+            display: "block",
+            marginTop: "2px",
+            fontFamily: "var(--font-mono)",
+            fontSize: "9px",
+            color: "var(--color-text)",
+            opacity: 0.5,
+          }}
+        >
+          +{named.length - 3}
+        </span>
+      )}
     </td>
   );
 }
