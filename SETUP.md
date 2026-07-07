@@ -116,25 +116,22 @@ Pipeline działa: baza ma ~1200 zawodników ze scoringiem, kalendarz imprez, bra
 dla top 150 prospektów. Poniższe kroki odblokowują resztę funkcji — **tylko Ty możesz
 je zrobić** (wymagają Twoich kont).
 
-### 7a. Google Custom Search — wyszukiwanie kont Instagram (WAŻNE)
+### 7a. Serper.dev — wyszukiwanie kont Instagram (WAŻNE)
 
-Obecny klucz w `.env.local` jest **nieważny** (API go odrzuca). Bez niego pipeline
+**Uwaga (lipiec 2026):** Google Custom Search JSON API jest **zamknięte dla nowych
+klientów** (403 permission denied) — zastąpione przez Serper.dev. Bez klucza pipeline
 nie szuka kont IG zawodników (celowo nie zgadujemy nazw kont LLM-em — zmyślał).
 
-1. Wejdź na https://console.cloud.google.com → utwórz projekt (lub użyj istniejącego)
-2. **APIs & Services → Library** → włącz **Custom Search API**
-3. **APIs & Services → Credentials → Create credentials → API key** → skopiuj klucz
-4. Wejdź na https://programmablesearchengine.google.com → **Add** → w polu
-   "What to search" daj **Search the entire web** → utwórz → skopiuj
-   **Search engine ID** (to jest `GOOGLE_CSE_CX`)
-5. Podmień w `.env.local`: `GOOGLE_CSE_API_KEY=...` i `GOOGLE_CSE_CX=...`
-6. Dodaj oba jako GitHub Secrets (Settings → Secrets → Actions):
-   `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_CX`
+1. Załóż konto na https://serper.dev → skopiuj API key z dashboardu
+2. Podmień w `.env.local`: `SERPER_API_KEY=...`
+3. Dodaj GitHub Secret (Settings → Secrets and variables → Actions): `SERPER_API_KEY`
 
-Limit darmowy: 100 zapytań/dzień — pipeline używa max 40/tydzień, więc spokojnie.
+Free tier: **2500 zapytań jednorazowo** (nie odnawia się — potem płatne).
+Pipeline używa max ~40/tydzień (`DISCOVERY_LIMIT`) + 1 probe/run, czyli
+darmowa pula starczy na ~rok.
 
-- [ ] Klucz Custom Search API utworzony i podmieniony w `.env.local`
-- [ ] `GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_CX` dodane jako GitHub Secrets
+- [ ] Klucz Serper.dev utworzony i wpisany w `.env.local`
+- [ ] `SERPER_API_KEY` dodany jako GitHub Secret
 
 ### 7b. Apify — walidacja kont IG + liczba followersów (opcjonalne, ale warto)
 

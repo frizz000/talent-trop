@@ -4,11 +4,12 @@ Discover Instagram handles for top prospects and compute Red Bull Brand Fit Scor
 
 Weekly workflow (social_discovery.yml). Two independent steps:
 
-1. Handle discovery — Google Custom Search (site:instagram.com) for athletes
-   without a social profile. Only runs when GOOGLE_CSE_API_KEY + GOOGLE_CSE_CX
-   are set and valid. Optional Apify validation (followers count) when
-   APIFY_API_TOKEN is set. Handles are stored with a confidence score and
-   discovery_method='auto' — the scout verifies them in the UI.
+1. Handle discovery — Serper.dev Google search (site:instagram.com) for athletes
+   without a social profile. Only runs when SERPER_API_KEY is set and valid.
+   (Replaces Google CSE — the Custom Search JSON API is closed to new customers.)
+   Optional Apify validation (followers count) when APIFY_API_TOKEN is set.
+   Handles are stored with a confidence score and discovery_method='auto' —
+   the scout verifies them in the UI.
    NOTE: no LLM guessing — a hallucinated handle is worse than no handle.
 
 2. Brand fit — Claude Haiku scores Red Bull brand fit for top prospects
@@ -17,7 +18,7 @@ Weekly workflow (social_discovery.yml). Two independent steps:
 
 Env:
   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY   (required)
-  GOOGLE_CSE_API_KEY, GOOGLE_CSE_CX                            (handle discovery)
+  SERPER_API_KEY                                               (handle discovery)
   APIFY_API_TOKEN (or legacy APIFY_API_KEY)                    (handle validation)
   DISCOVERY_LIMIT (default 40), BRAND_FIT_LIMIT (default 150)
 """
@@ -70,8 +71,10 @@ def get_claude() -> anthropic.Anthropic:
 
 
 # ---------------------------------------------------------------------------
-# Step 1 — Handle discovery via Google Custom Search
+# Step 1 — Handle discovery via Serper.dev (Google search API)
 # ---------------------------------------------------------------------------
+
+SERPER_ENDPOINT = "https://google.serper.dev/search"
 
 def _name_similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
@@ -79,26 +82,21 @@ def _name_similarity(a: str, b: str) -> float:
 
 def search_instagram_handle(name: str, discipline: str) -> dict | None:
     """
-    Google CSE query for the athlete's Instagram. Returns
+    Serper.dev query for the athlete's Instagram. Returns
     {handle, confidence, source_title} or None.
     """
-    api_key = os.environ.get("GOOGLE_CSE_API_KEY")
-    cx = os.environ.get("GOOGLE_CSE_CX")
-    if not api_key or not cx:
+    api_key = os.environ.get("SERPER_API_KEY")
+    if not api_key:
         return None
 
-    resp = requests.get(
-        "https://www.googleapis.com/customsearch/v1",
-        params={
-            "key": api_key,
-            "cx": cx,
-            "q": f'"{name}" {discipline} site:instagram.com',
-            "num": 5,
-        },
+    resp = requests.post(
+        SERPER_ENDPOINT,
+        headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
+        json={"q": f'"{name}" {discipline} site:instagram.com', "num": 5},
         timeout=20,
     )
     resp.raise_for_status()
-    items = resp.json().get("items", [])
+    items = resp.json().get("organic", [])
 
     best: dict | None = None
     for rank, item in enumerate(items):
@@ -150,31 +148,31 @@ def validate_handle_apify(handle: str, token: str) -> dict | None:
     return None
 
 
-def _validate_cse_key(api_key: str, cx: str) -> str | None:
+def _validate_serper_key(api_key: str) -> str | None:
     """One cheap probe query. Returns error message if the key is unusable."""
     try:
-        resp = requests.get(
-            "https://www.googleapis.com/customsearch/v1",
-            params={"key": api_key, "cx": cx, "q": "test", "num": 1},
+        resp = requests.post(
+            SERPER_ENDPOINT,
+            headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
+            json={"q": "test", "num": 1},
             timeout=20,
         )
         if resp.status_code != 200:
-            detail = resp.json().get("error", {}).get("message", resp.text[:200])
-            return f"Google CSE key rejected (HTTP {resp.status_code}): {detail}"
+            detail = resp.json().get("message", resp.text[:200])
+            return f"Serper key rejected (HTTP {resp.status_code}): {detail}"
     except Exception as e:
-        return f"Google CSE probe failed: {e}"
+        return f"Serper probe failed: {e}"
     return None
 
 
 def run_handle_discovery(sb: Client) -> tuple[int, list[str]]:
     """Discover IG handles for top prospects without a social profile."""
-    api_key = os.environ.get("GOOGLE_CSE_API_KEY")
-    cx = os.environ.get("GOOGLE_CSE_CX")
-    if not api_key or not cx:
-        print("\n[1/2] Handle discovery SKIPPED — GOOGLE_CSE_API_KEY / GOOGLE_CSE_CX not set.")
-        return 0, ["handle discovery skipped: GOOGLE_CSE_API_KEY / GOOGLE_CSE_CX not set"]
+    api_key = os.environ.get("SERPER_API_KEY")
+    if not api_key:
+        print("\n[1/2] Handle discovery SKIPPED — SERPER_API_KEY not set.")
+        return 0, ["handle discovery skipped: SERPER_API_KEY not set"]
 
-    key_error = _validate_cse_key(api_key, cx)
+    key_error = _validate_serper_key(api_key)
     if key_error:
         print(f"\n[1/2] Handle discovery FAILED — {key_error}")
         return 0, [key_error]
