@@ -165,17 +165,17 @@ def _validate_serper_key(api_key: str) -> str | None:
     return None
 
 
-def run_handle_discovery(sb: Client) -> tuple[int, list[str]]:
-    """Discover IG handles for top prospects without a social profile."""
+def run_handle_discovery(sb: Client) -> tuple[int, int, list[str]]:
+    """Discover IG handles for top prospects. Returns (found, attempted, errors)."""
     api_key = os.environ.get("SERPER_API_KEY")
     if not api_key:
         print("\n[1/2] Handle discovery SKIPPED — SERPER_API_KEY not set.")
-        return 0, ["handle discovery skipped: SERPER_API_KEY not set"]
+        return 0, 0, ["handle discovery skipped: SERPER_API_KEY not set"]
 
     key_error = _validate_serper_key(api_key)
     if key_error:
         print(f"\n[1/2] Handle discovery FAILED — {key_error}")
-        return 0, [key_error]
+        return 0, 0, [key_error]
 
     apify_token = os.environ.get("APIFY_API_TOKEN") or os.environ.get("APIFY_API_KEY")
 
@@ -245,12 +245,29 @@ def run_handle_discovery(sb: Client) -> tuple[int, list[str]]:
             errors.append(msg)
         time.sleep(0.5)
 
-    return found, errors
+    return found, len(todo), errors
 
 
 # ---------------------------------------------------------------------------
 # Step 2 — Brand fit score via Claude
 # ---------------------------------------------------------------------------
+
+def _extract_json_object(raw: str) -> dict:
+    """Parse the first {...} object in the text, tolerating prose/fences around it."""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        parts = raw.split("```")
+        if len(parts) > 1:
+            raw = parts[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start == -1 or end <= start:
+        raise ValueError(f"no JSON object in response: {raw[:120]!r}")
+    return json.loads(raw[start:end + 1])
+
 
 def compute_brand_fit(
     claude: anthropic.Anthropic, athlete: dict, followers: int | None
@@ -287,21 +304,28 @@ audience_fit: 18-30 male-skewed alignment
 performance_level: competitiveness based on federation rankings and age category
 brand_risk: inverse score — 0=high risk, 25=low risk (no competitor brand etc.)"""
 
-    resp = claude.messages.create(
-        model=HAIKU_MODEL,
-        max_tokens=400,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    raw = resp.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    last_err: Exception = RuntimeError("brand fit: no attempt made")
+    for attempt in range(3):
+        try:
+            resp = claude.messages.create(
+                model=HAIKU_MODEL,
+                max_tokens=400,
+                temperature=0,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            result = _extract_json_object(resp.content[0].text)
+            if "score" not in result:
+                raise ValueError("response JSON has no 'score' field")
+            return result
+        except Exception as e:
+            last_err = e
+            if attempt < 2:
+                time.sleep(1 + attempt)
+    raise last_err
 
 
-def run_brand_fit(sb: Client, claude: anthropic.Anthropic) -> tuple[int, list[str]]:
-    """Score brand fit for top prospects; recompute stale scores."""
+def run_brand_fit(sb: Client, claude: anthropic.Anthropic) -> tuple[int, int, list[str]]:
+    """Score brand fit for top prospects. Returns (scored, attempted, errors)."""
     stale_cutoff = (
         datetime.now(timezone.utc) - timedelta(days=BRAND_FIT_MAX_AGE_DAYS)
     ).isoformat()
@@ -367,7 +391,7 @@ def run_brand_fit(sb: Client, claude: anthropic.Anthropic) -> tuple[int, list[st
             print(f"  [ERR] {name}: {e}")
         time.sleep(0.3)
 
-    return scored, errors
+    return scored, len(todo), errors
 
 
 # ---------------------------------------------------------------------------
@@ -385,19 +409,29 @@ def main() -> None:
     }).execute()
     run_id = run_resp.data[0]["id"]
 
-    found, disc_errors = run_handle_discovery(sb)
-    scored, fit_errors = run_brand_fit(sb, claude)
+    found, disc_attempted, disc_errors = run_handle_discovery(sb)
+    scored, fit_attempted, fit_errors = run_brand_fit(sb, claude)
     errors = disc_errors + fit_errors
 
+    # Per-athlete errors are logged above and in error_log, but only a
+    # systemic problem fails the workflow: nothing scored despite having
+    # candidates, or >20% of attempted items erroring.
+    attempted = disc_attempted + fit_attempted
+    error_rate = len(errors) / attempted if attempted else 0.0
+    run_failed = (fit_attempted > 0 and scored == 0) or error_rate > 0.2
+
     sb.table("ingestion_runs").update({
-        "status": "error" if errors else "success",
+        "status": "error" if run_failed else "success",
         "items_processed": found + scored,
         "finished_at": datetime.now(timezone.utc).isoformat(),
         "error_log": "\n".join(errors) if errors else None,
     }).eq("id", run_id).execute()
 
-    print(f"\nDone. Handles found: {found}, brand fit scored: {scored}, errors: {len(errors)}")
-    if errors:
+    print(
+        f"\nDone. Handles found: {found}, brand fit scored: {scored}, "
+        f"errors: {len(errors)}/{attempted} attempted ({error_rate:.0%})"
+    )
+    if run_failed:
         sys.exit(1)
 
 
