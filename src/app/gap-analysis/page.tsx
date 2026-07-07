@@ -30,8 +30,16 @@ const COVERAGE = {
 
 type CoverageKey = keyof typeof COVERAGE;
 
-function CoverageCell({ status }: { status: string }) {
+type RosterEntry = {
+  name: string | null;
+  athlete_id: string | null;
+  status: string | null;
+  source_url: string | null;
+};
+
+function CoverageCell({ status, roster }: { status: string; roster: RosterEntry[] }) {
   const cfg = COVERAGE[(status as CoverageKey) ?? "unknown"] ?? COVERAGE.unknown;
+  const named = roster.filter((r) => r.name);
   return (
     <td
       style={{
@@ -47,6 +55,39 @@ function CoverageCell({ status }: { status: string }) {
       }}
     >
       {cfg.label}
+      {named.map((r) => {
+        const label = r.status === "ambassador" ? `${r.name} ✦` : r.name;
+        const style = {
+          display: "block",
+          marginTop: "3px",
+          fontFamily: "var(--font-body)",
+          fontSize: "10px",
+          fontWeight: 500,
+          color: "var(--color-text)",
+          opacity: 0.85,
+          textDecoration: "none",
+          borderBottom: "1px dotted currentColor",
+          width: "fit-content",
+          marginLeft: "auto",
+          marginRight: "auto",
+        } as const;
+        return r.athlete_id ? (
+          <Link key={r.name} href={`/athlete-hub/${r.athlete_id}`} style={style} title="Profil w bazie">
+            {label}
+          </Link>
+        ) : (
+          <a
+            key={r.name}
+            href={r.source_url ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={style}
+            title="Profil na redbull.com"
+          >
+            {label}
+          </a>
+        );
+      })}
     </td>
   );
 }
@@ -82,7 +123,7 @@ export default async function GapAnalysisPage() {
 
   const supabase = await createClient();
 
-  const [{ data, error }, { data: athleteRows }] = await Promise.all([
+  const [{ data, error }, { data: athleteRows }, { data: rosterRows }] = await Promise.all([
     supabase
       .from("discipline_gaps")
       .select("discipline, poland_coverage_status, comparator_countries_coverage, priority_score")
@@ -92,6 +133,10 @@ export default async function GapAnalysisPage() {
       .select("discipline")
       .neq("discovery_status", "rejected")
       .limit(3000),
+    supabase
+      .from("redbull_roster")
+      .select("country, discipline, name, athlete_id, status, source_url")
+      .order("name"),
   ]);
 
   const gaps: DisciplineGap[] = (data ?? []).map((row) => ({
@@ -101,6 +146,14 @@ export default async function GapAnalysisPage() {
       (row.comparator_countries_coverage as Record<string, string>) ?? {},
     priority_score: row.priority_score,
   }));
+
+  // Verified Red Bull roster names per country × discipline (links in cells)
+  const rosterMap = new Map<string, RosterEntry[]>();
+  for (const r of rosterRows ?? []) {
+    const key = `${r.country}|${r.discipline}`;
+    if (!rosterMap.has(key)) rosterMap.set(key, []);
+    rosterMap.get(key)!.push(r);
+  }
 
   // Real candidate supply per discipline from our own athlete DB
   const candidateCounts = new Map<string, number>();
@@ -378,7 +431,13 @@ export default async function GapAnalysisPage() {
                       c === "poland"
                         ? gap.poland_coverage_status
                         : (gap.comparator_countries_coverage[c] ?? "unknown");
-                    return <CoverageCell key={c} status={status} />;
+                    return (
+                      <CoverageCell
+                        key={c}
+                        status={status}
+                        roster={rosterMap.get(`${c}|${gap.discipline}`) ?? []}
+                      />
+                    );
                   })}
                 </tr>
               ))}
@@ -389,7 +448,8 @@ export default async function GapAnalysisPage() {
 
       {/* Source note */}
       <p className="mt-4 text-xs stat" style={{ color: "var(--color-muted)" }}>
-        Dane: tabela <code>discipline_gaps</code> · Źródło: analiza publicznych rosterów Red Bull ·{" "}
+        Dane: tabele <code>discipline_gaps</code> + <code>redbull_roster</code> · Nazwiska w komórkach
+        = zawodnicy Red Bull zweryfikowani na redbull.com (✦ = ambasador) ·{" "}
         <span style={{ color: "var(--color-accent)" }}>
           ⚠ Zweryfikuj ręcznie przed prezentacją klientowi
         </span>
