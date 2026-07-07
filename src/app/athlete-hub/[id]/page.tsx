@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { ScoutNoteForm } from "./ScoutNoteForm";
+import { ScoreInfoButton } from "./ScoreInfoButton";
 import { WatchlistStatusSelect } from "./WatchlistStatusSelect";
 import { updateDiscoveryStatus } from "./actions";
 
@@ -720,6 +721,8 @@ export default async function AthleteProfilePage({ params }: Props) {
           <ScoutNoteForm athleteId={id} />
         </div>
       </div>
+
+      <ScoreInfoButton />
     </div>
   );
 }
