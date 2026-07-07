@@ -195,9 +195,12 @@ def _pzkol_detail(url: str) -> dict:
         resp.raise_for_status()
         text = BeautifulSoup(resp.text, "html.parser").get_text("\n", strip=True)
         lines = text.split("\n")
+        # The sidebar lists other events' Miejsce/Dyscyplina too — the main
+        # event's fields come first, so keep only the first occurrence of each.
         for i, line in enumerate(lines):
-            if line in ("Miejsce:", "Ranga:", "Dyscyplina:") and i + 1 < len(lines):
-                out[line.rstrip(":").lower()] = lines[i + 1].strip()
+            key = line.rstrip(":").lower()
+            if line in ("Miejsce:", "Ranga:", "Dyscyplina:") and i + 1 < len(lines) and key not in out:
+                out[key] = lines[i + 1].strip()
     except Exception as e:
         print(f"    [WARN] detail {url}: {e}")
     return out
@@ -241,6 +244,94 @@ def fetch_pzkol_events() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# PZM / motoresults.pl — motocross + superenduro calendars
+# ---------------------------------------------------------------------------
+
+MOTORESULTS_BASE = "https://wyniki.motoresults.pl"
+
+# (sport path, series code, our discipline, series label for importance)
+MOTORESULTS_SERIES = [
+    ("Motocross", "MP", "motocross", "Mistrzostwa Polski"),
+    ("Motocross", "PP", "motocross", "Puchar Polski"),
+    ("Motocross", "AMIC", "motocross", "AMIC Energy Motocross Cup"),
+    ("SuperEnduro", "MS", "superenduro", "Mistrzostwa Świata"),
+]
+
+_MONTHS_EN = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11,
+    "december": 12,
+}
+
+
+def _parse_motoresults_title(title: str, year: int) -> dict | None:
+    """
+    '<name> - <venue>, 21 June | MP Motocross 2026 | motoresults'
+    '<name> - <venue>, 20-21 June | ...' → start/end range.
+    """
+    head = title.split("|")[0].strip()
+    m = re.match(
+        r"^(?P<name>.+?)\s*-\s*(?P<venue>[^,]+),\s*"
+        r"(?P<d1>\d{1,2})(?:\s*[-–]\s*(?P<d2>\d{1,2}))?\s+(?P<month>[A-Za-z]+)$",
+        head,
+    )
+    if not m:
+        return None
+    month = _MONTHS_EN.get(m.group("month").lower())
+    if not month:
+        return None
+    start = f"{year}-{month:02d}-{int(m.group('d1')):02d}"
+    end = f"{year}-{month:02d}-{int(m.group('d2')):02d}" if m.group("d2") else None
+    return {
+        "name": m.group("name").strip(),
+        "location": m.group("venue").strip(),
+        "start_date": start,
+        "end_date": end,
+    }
+
+
+def fetch_pzm_events(year: int | None = None) -> list[dict]:
+    year = year or date.today().year
+    events: list[dict] = []
+    for sport, series, discipline, series_label in MOTORESULTS_SERIES:
+        index_url = f"{MOTORESULTS_BASE}/en/{year}/{sport}/{series}"
+        print(f"  [pzm] {index_url}")
+        try:
+            resp = requests.get(index_url, headers=HEADERS, timeout=20)
+            resp.raise_for_status()
+        except Exception as e:
+            print(f"    [WARN] {e}")
+            continue
+
+        # Event detail links end with /e_<id>; dates live in the detail <title>
+        hrefs = sorted(set(re.findall(
+            rf"href=\"({re.escape(f'/en/{year}/{sport}/{series}')}/[^\"]*?/e_\d+)\"",
+            resp.text,
+        )))
+        for href in hrefs:
+            try:
+                detail = requests.get(MOTORESULTS_BASE + href, headers=HEADERS, timeout=20)
+                detail.raise_for_status()
+                title_m = re.search(r"<title>(.*?)</title>", detail.text, re.S)
+                if not title_m:
+                    continue
+                parsed = _parse_motoresults_title(title_m.group(1).strip(), year)
+                if not parsed:
+                    continue
+                # Generic round names ("Round 1") need the sport for context
+                if not re.search(sport.replace("-", ".?"), parsed["name"], re.IGNORECASE):
+                    parsed["name"] = f"{sport} {parsed['name']}"
+                parsed["name"] = f"{parsed['name']} ({series_label})"
+                parsed["discipline"] = discipline
+                parsed["importance_level"] = importance_from_name(series_label)
+                events.append(parsed)
+            except Exception as e:
+                print(f"    [WARN] detail {href}: {e}")
+            time.sleep(0.3)
+    return events
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -268,7 +359,7 @@ def main() -> None:
     load_env()
 
     parser = argparse.ArgumentParser(description="Ingest federation event calendars")
-    parser.add_argument("--sources", default="pza,pzkol")
+    parser.add_argument("--sources", default="pza,pzkol,pzm")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     sources = {s.strip() for s in args.sources.split(",")}
@@ -285,7 +376,7 @@ def main() -> None:
     errors: list[str] = []
 
     if "pza" in sources:
-        print("\n[1/2] PZA climbing calendar...")
+        print("\n[1/3] PZA climbing calendar...")
         try:
             found = fetch_pza_events()
             print(f"  → {len(found)} events")
@@ -295,13 +386,23 @@ def main() -> None:
             print(f"  [ERR] {e}")
 
     if "pzkol" in sources:
-        print("\n[2/2] PZKol cycling calendar...")
+        print("\n[2/3] PZKol cycling calendar...")
         try:
             found = fetch_pzkol_events()
             print(f"  → {len(found)} events")
             all_events.extend(found)
         except Exception as e:
             errors.append(f"pzkol: {e}")
+            print(f"  [ERR] {e}")
+
+    if "pzm" in sources:
+        print("\n[3/3] PZM motocross/superenduro (motoresults.pl)...")
+        try:
+            found = fetch_pzm_events()
+            print(f"  → {len(found)} events")
+            all_events.extend(found)
+        except Exception as e:
+            errors.append(f"pzm: {e}")
             print(f"  [ERR] {e}")
 
     # Keep only current + future events (calendar view is forward-looking)
