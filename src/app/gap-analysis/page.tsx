@@ -123,16 +123,28 @@ export default async function GapAnalysisPage() {
 
   const supabase = await createClient();
 
-  const [{ data, error }, { data: athleteRows }, { data: rosterRows }] = await Promise.all([
+  // Supabase caps a single request at 1000 rows — page through athletes
+  const fetchAllAthleteDisciplines = async () => {
+    const rows: { discipline: string | null }[] = [];
+    const PAGE = 1000;
+    for (let from = 0; from < 10000; from += PAGE) {
+      const { data: page } = await supabase
+        .from("athletes")
+        .select("discipline")
+        .neq("discovery_status", "rejected")
+        .range(from, from + PAGE - 1);
+      rows.push(...(page ?? []));
+      if (!page || page.length < PAGE) break;
+    }
+    return rows;
+  };
+
+  const [{ data, error }, athleteRows, { data: rosterRows }] = await Promise.all([
     supabase
       .from("discipline_gaps")
       .select("discipline, poland_coverage_status, comparator_countries_coverage, priority_score")
       .order("priority_score", { ascending: false }),
-    supabase
-      .from("athletes")
-      .select("discipline")
-      .neq("discovery_status", "rejected")
-      .limit(3000),
+    fetchAllAthleteDisciplines(),
     supabase
       .from("redbull_roster")
       .select("country, discipline, name, athlete_id, status, source_url")
@@ -155,11 +167,17 @@ export default async function GapAnalysisPage() {
     rosterMap.get(key)!.push(r);
   }
 
-  // Real candidate supply per discipline from our own athlete DB
+  // Real candidate supply per discipline from our own athlete DB.
+  // Pipeline discipline slugs that differ from discipline_gaps naming:
+  const DISCIPLINE_ALIASES: Record<string, string> = {
+    freestyle_ski: "freestyle skiing",
+    alpine_skiing: "alpine skiing",
+  };
   const candidateCounts = new Map<string, number>();
   for (const row of athleteRows ?? []) {
     if (row.discipline) {
-      candidateCounts.set(row.discipline, (candidateCounts.get(row.discipline) ?? 0) + 1);
+      const key = DISCIPLINE_ALIASES[row.discipline] ?? row.discipline;
+      candidateCounts.set(key, (candidateCounts.get(key) ?? 0) + 1);
     }
   }
 

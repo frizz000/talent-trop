@@ -36,7 +36,7 @@ Source of truth: `skaut_dashboard_architektura3.md` (full architecture brief).
 5. **social_profiles** — IG/TikTok handles with confidence score + engagement metrics. `enrichment_status` text+check (`pending`|`enriched`|`failed`, migration `0006`); `profile_pic_url` holds a **Supabase Storage URL** (bucket `athlete-avatars`), never the Instagram CDN URL (Meta links expire in days)
 6. **brand_fit_scores** — Red Bull brand fit score 0–100 with `factors` jsonb breakdown
 7. **talent_score_history** — time series of scores with `factors` jsonb breakdown
-8. **redbull_roster** — known Red Bull athletes (reference for gap analysis)
+8. **redbull_roster** — known Red Bull athletes (reference for gap analysis). `name` text (migration `0007`) for entries without an `athletes` record; Polish entries link `athlete_id`. Names verified against live redbull.com `/athlete/` profiles (2026-07-07); rendered as links in the gap-analysis heatmap cells
 9. **discipline_gaps** — precomputed gap analysis per discipline
 10. **scout_notes** — private CRM notes per athlete
 11. **social_signals** — time-series social metrics (engagement spikes etc.)
