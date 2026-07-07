@@ -169,8 +169,10 @@ def run_handle_discovery(sb: Client) -> tuple[int, int, list[str]]:
     """Discover IG handles for top prospects. Returns (found, attempted, errors)."""
     api_key = os.environ.get("SERPER_API_KEY")
     if not api_key:
+        # Missing key is a config choice, not a failure — warn without
+        # polluting the error rate that decides the run's exit code.
         print("\n[1/2] Handle discovery SKIPPED — SERPER_API_KEY not set.")
-        return 0, 0, ["handle discovery skipped: SERPER_API_KEY not set"]
+        return 0, 0, []
 
     key_error = _validate_serper_key(api_key)
     if key_error:
