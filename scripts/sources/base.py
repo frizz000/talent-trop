@@ -35,6 +35,21 @@ class FederationAthlete:
     extra: dict = field(default_factory=dict)
 
 
+def is_multi_person_name(name: str) -> bool:
+    """
+    True when a 'name' is actually a relay/team roster, e.g. PZLA relays:
+    'Aleksander LEPIONKA Adrian TABAKA Marcin LIBURA Sebastian Wojtasik'.
+    Heuristics (verified against the live DB — zero false positives on real
+    Polish names, which never exceed 4 tokens): 5+ tokens, or 2+ all-caps
+    surname tokens left over from concatenating 'SURNAME Firstname' entries.
+    """
+    tokens = name.split()
+    if len(tokens) >= 5:
+        return True
+    upper = [t for t in tokens if len(t) > 2 and t.replace("-", "").isalpha() and t.isupper()]
+    return len(upper) >= 2
+
+
 def safe_get(url: str, timeout: int = 15, retries: int = 2, delay: float = 1.0) -> requests.Response:
     """GET with retry, returns Response or raises."""
     for attempt in range(retries + 1):

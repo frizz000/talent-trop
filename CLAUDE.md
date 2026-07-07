@@ -126,6 +126,8 @@ Source scrapers: `scripts/sources/` package.
 
 **Fuzzy name matching:** `SequenceMatcher` threshold 0.85. Exact ilike first, then word-by-word fuzzy on first 2 words > 3 chars.
 
+**Relay/team filter:** `sources/base.py is_multi_person_name()` (5+ tokens or 2+ ALL-CAPS tokens) drops team rosters masquerading as one athlete — applied in `ingest_federations.process_athletes` (all sources) and PZLA relay event sections (`4 x` / `sztafet*`) are skipped in the scraper. One-time DB cleanup: `scripts/cleanup_team_names.py` (rejected 123 PZLA relays, 2026-07-07).
+
 **Scheduled:** `.github/workflows/ingest_federations.yml` — monthly on 1st at 05:00 UTC.
 
 **Future source — PZLA (athletics), research notes (2026-07-02):** `https://statystyka.pzla.pl/` works only with `verify=False` (broken cert chain; plain http redirects to https). Age-category leader lists: query params `?Wojew=&Sezon=&Plec=K|M&kat=3` (U20), `kat=4` (U18), `kat=5` (U16) — but adding `Sezon=2025&Wojew=ALL` returns an empty 2.5 KB page; the leaders view likely needs a session cookie or a POST from the homepage form (old Domtel-Sport system). DMP classification pages exist at `index2.php?co=3&t=1|2&s=<year>&r=<n>`.

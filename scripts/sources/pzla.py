@@ -48,6 +48,9 @@ MAX_PER_EVENT = 12
 # Event header row, e.g. '100 m M', 'Skok w dal K', 'Rzut oszczepem (700g) M'
 _EVENT_HEADER_RE = re.compile(r"^(.{2,50}?)\s+(M|K)$")
 
+# Relay events list whole team rosters in the name cell — skip the section
+_RELAY_EVENT_RE = re.compile(r"4\s*x|sztafet", re.IGNORECASE)
+
 # Position cell: '1.' / '12.'
 _POS_RE = re.compile(r"^(\d+)\.?$")
 
@@ -100,7 +103,8 @@ def _parse_leaders(html: str, season: str, age_cat: str, gender: str) -> list[Fe
         if len(cells) <= 3:
             m = _EVENT_HEADER_RE.match(cells[0])
             if m:
-                current_event = m.group(1).strip()
+                event = m.group(1).strip()
+                current_event = None if _RELAY_EVENT_RE.search(event) else event
                 count_in_event = 0
             continue
 

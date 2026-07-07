@@ -42,7 +42,7 @@ from supabase import create_client, Client
 # Add scripts/ to path so `sources` package is importable
 sys.path.insert(0, os.path.dirname(__file__))
 
-from sources.base import FederationAthlete
+from sources.base import FederationAthlete, is_multi_person_name
 from sources import pza_climbing, pzkol, pzm_motocross, pzla, fis, ifsc, speedskating
 
 HAIKU_MODEL = "claude-haiku-4-5-20251001"
@@ -193,6 +193,12 @@ def process_athletes(
     source_name: str,
 ) -> dict:
     stats = {"linked": 0, "created": 0, "updated": 0, "errors": 0}
+
+    # 0. Drop relay/team rosters masquerading as one athlete (any source)
+    teams = [a for a in athletes if is_multi_person_name(a.external_name)]
+    if teams:
+        print(f"  Skipping {len(teams)} relay/team entries (multi-person names)")
+        athletes = [a for a in athletes if not is_multi_person_name(a.external_name)]
 
     # 1. Split into matched / new (dedup new by name — same person appears in
     #    multiple events/categories within one fetch)
