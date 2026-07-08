@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  PipelineControls,
+  type PipelineSettingsRow,
+  type WorkflowSettingsRow,
+} from "./PipelineControls";
 
 export const metadata = { title: "Admin — Talent Trop" };
 export const revalidate = 60;
@@ -52,13 +57,26 @@ export default async function AdminPage() {
 
   const supabase = await createClient();
 
-  const { data: runs, error } = await supabase
-    .from("ingestion_runs")
-    .select(
-      "id, source, status, items_processed, started_at, finished_at, error_log"
-    )
-    .order("started_at", { ascending: false })
-    .limit(30);
+  const [{ data: runs, error }, pipelineRes, workflowRes] = await Promise.all([
+    supabase
+      .from("ingestion_runs")
+      .select(
+        "id, source, status, items_processed, started_at, finished_at, error_log"
+      )
+      .order("started_at", { ascending: false })
+      .limit(30),
+    supabase
+      .from("pipeline_settings")
+      .select("is_enabled, disabled_by_reason, updated_at")
+      .eq("id", 1)
+      .maybeSingle(),
+    supabase
+      .from("workflow_settings")
+      .select("workflow_id, is_enabled, updated_at"),
+  ]);
+
+  const pipelineSettings = (pipelineRes.data ?? null) as PipelineSettingsRow | null;
+  const workflowSettings = (workflowRes.data ?? []) as WorkflowSettingsRow[];
 
   const ingestionRuns: IngestionRun[] = (runs ?? []) as IngestionRun[];
 
@@ -79,6 +97,9 @@ export default async function AdminPage() {
         title="Admin"
         subtitle="Ostatnie 30 uruchomień pipeline'u"
       />
+
+      {/* Kontrola pipeline'u — master switch + per-workflow switches */}
+      <PipelineControls global={pipelineSettings} workflows={workflowSettings} />
 
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 stagger">
@@ -126,49 +147,6 @@ export default async function AdminPage() {
             </p>
           </div>
         ))}
-      </div>
-
-      {/* Workflow triggers */}
-      <div className="mb-8">
-        <h2
-          className="text-sm font-bold uppercase tracking-wider mb-3"
-          style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
-        >
-          GitHub Actions Workflows
-        </h2>
-        <div className="card overflow-hidden">
-          {[
-            { name: "ingest.yml",  description: "RSS ingestion", schedule: "co 3h" },
-            { name: "process.yml", description: "LLM processing", schedule: "06:00 UTC daily" },
-            { name: "compute.yml", description: "Talent score compute", schedule: "07:00 UTC daily" },
-            { name: "backup.yml",  description: "pg_dump backup", schedule: "03:00 UTC Sunday" },
-          ].map((w, i, arr) => (
-            <div
-              key={w.name}
-              className="flex items-center gap-4 px-4 py-3"
-              style={{
-                borderBottom:
-                  i < arr.length - 1 ? "1px solid var(--color-border)" : "none",
-              }}
-            >
-              <span
-                className="stat text-sm font-bold"
-                style={{ color: "var(--color-text)", minWidth: "140px" }}
-              >
-                {w.name}
-              </span>
-              <span className="text-xs flex-1" style={{ color: "var(--color-muted)" }}>
-                {w.description}
-              </span>
-              <span
-                className="stat text-xs"
-                style={{ color: "var(--color-muted)" }}
-              >
-                {w.schedule}
-              </span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Error */}
