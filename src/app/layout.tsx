@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pl" className="h-full antialiased">
-      <body className="flex h-full" style={{ backgroundColor: "var(--color-bg)" }}>
+      <body className="flex h-full">
         <Sidebar />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </body>

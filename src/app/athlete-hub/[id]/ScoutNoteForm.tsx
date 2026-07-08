@@ -26,22 +26,25 @@ export function ScoutNoteForm({ athleteId }: { athleteId: string }) {
         style={{
           backgroundColor: "var(--color-bg)",
           border: "1px solid var(--color-border)",
-          borderRadius: "6px",
+          borderRadius: "8px",
           color: "var(--color-text)",
           fontFamily: "var(--font-body)",
+          transition: "border-color .15s ease",
         }}
       />
       <button
         type="submit"
         disabled={isPending}
-        className="self-end text-xs font-bold uppercase tracking-wider px-3 py-1.5"
+        className="self-end text-xs font-bold uppercase tracking-wider px-3.5 py-1.5"
         style={{
           backgroundColor: isPending ? "var(--color-border)" : "var(--color-accent)",
           color: "#fff",
-          borderRadius: "6px",
+          borderRadius: "8px",
           fontFamily: "var(--font-display)",
           cursor: isPending ? "not-allowed" : "pointer",
           border: "none",
+          boxShadow: isPending ? "none" : "0 2px 12px -3px rgba(230,13,63,.5)",
+          transition: "background-color .15s ease, box-shadow .15s ease",
         }}
       >
         {isPending ? "Zapisuję..." : "Dodaj notatkę"}

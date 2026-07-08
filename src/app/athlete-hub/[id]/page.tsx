@@ -45,20 +45,20 @@ const RB_LABELS: Record<string, string> = {
   unknown: "Status Unknown",
 };
 const RB_COLORS: Record<string, string> = {
-  signed: "#e8351a",
-  unsigned: "#6b6b6b",
-  unknown: "#2a2a2a",
+  signed: "#e60d3f",
+  unsigned: "#8a92ab",
+  unknown: "#4a5372",
 };
 const IMPORTANCE_COLORS: Record<string, string> = {
-  major: "#e8351a",
-  international: "#f59e0b",
-  national: "#84cc16",
-  minor: "#6b6b6b",
+  major: "#ff3564",
+  international: "#ffc906",
+  national: "#a3e635",
+  minor: "#8a92ab",
 };
 const PLACEMENT_COLORS = (p: number | null) => {
-  if (p === 1) return "#f59e0b";
-  if (p === 2) return "#9ca3af";
-  if (p === 3) return "#92400e";
+  if (p === 1) return "#ffc906";
+  if (p === 2) return "#c3cad9";
+  if (p === 3) return "#cd8a4e";
   return "var(--color-muted)";
 };
 
@@ -172,9 +172,9 @@ export default async function AthleteProfilePage({ params }: Props) {
         <div
           className="mb-6 p-4 flex items-center gap-4 flex-wrap"
           style={{
-            border: "1px solid var(--color-accent)66",
-            borderRadius: "8px",
-            backgroundColor: "var(--color-accent)11",
+            border: "1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)",
+            borderRadius: "12px",
+            backgroundColor: "color-mix(in srgb, var(--color-accent) 8%, transparent)",
           }}
         >
           <div className="flex-1 min-w-0">
@@ -197,10 +197,11 @@ export default async function AthleteProfilePage({ params }: Props) {
                 className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 cursor-pointer"
                 style={{
                   fontFamily: "var(--font-display)",
-                  backgroundColor: "var(--color-trend-up)22",
+                  backgroundColor: "color-mix(in srgb, var(--color-trend-up) 14%, transparent)",
                   color: "var(--color-trend-up)",
-                  border: "1px solid var(--color-trend-up)66",
-                  borderRadius: "6px",
+                  border: "1px solid color-mix(in srgb, var(--color-trend-up) 40%, transparent)",
+                  borderRadius: "7px",
+                  transition: "background-color .15s ease",
                 }}
               >
                 Potwierdź
@@ -307,14 +308,8 @@ export default async function AthleteProfilePage({ params }: Props) {
           {/* Badges + watchlist */}
           <div className="flex items-center gap-3 flex-wrap">
             <span
-              className="text-xs font-bold uppercase tracking-wider px-2 py-0.5"
-              style={{
-                fontFamily: "var(--font-display)",
-                backgroundColor: `${RB_COLORS[athlete.red_bull_status]}22`,
-                color: RB_COLORS[athlete.red_bull_status],
-                border: `1px solid ${RB_COLORS[athlete.red_bull_status]}44`,
-                borderRadius: "4px",
-              }}
+              className="chip"
+              style={{ color: RB_COLORS[athlete.red_bull_status] }}
             >
               {RB_LABELS[athlete.red_bull_status]}
             </span>
@@ -371,7 +366,7 @@ export default async function AthleteProfilePage({ params }: Props) {
                 </p>
                 <p
                   className="stat leading-none"
-                  style={{ fontSize: "60px", fontWeight: 700, color: "#f59e0b" }}
+                  style={{ fontSize: "60px", fontWeight: 700, color: "var(--color-gold)" }}
                 >
                   {Number(brandFit.score).toFixed(0)}
                 </p>
@@ -434,7 +429,7 @@ export default async function AthleteProfilePage({ params }: Props) {
                   </p>
                   <p
                     className="stat text-lg font-bold"
-                    style={{ color: "#f59e0b" }}
+                    style={{ color: "var(--color-gold)" }}
                   >
                     {(v as number).toFixed(1)}
                   </p>

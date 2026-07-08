@@ -51,24 +51,14 @@ export function FilterBar({ region, discipline }: FilterBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-3 mb-6">
       {/* Region toggle */}
-      <div
-        className="flex overflow-hidden"
-        style={{ border: "1px solid var(--color-border)", borderRadius: "8px" }}
-      >
-        {tabs.map((tab, i) => {
+      <div className="segmented">
+        {tabs.map((tab) => {
           const active = region === tab.value;
           return (
             <button
               key={tab.value}
               onClick={() => setParam("region", tab.value === "all" ? null : tab.value)}
-              className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors"
-              style={{
-                fontFamily: "var(--font-display)",
-                backgroundColor: active ? "var(--color-accent)" : "transparent",
-                color: active ? "#fff" : "var(--color-muted)",
-                borderRight:
-                  i < tabs.length - 1 ? "1px solid var(--color-border)" : "none",
-              }}
+              className={active ? "active" : undefined}
             >
               {tab.label}
             </button>
@@ -80,14 +70,8 @@ export function FilterBar({ region, discipline }: FilterBarProps) {
       <select
         value={discipline ?? ""}
         onChange={(e) => setParam("discipline", e.target.value || null)}
-        className="text-xs px-3 py-1.5 outline-none cursor-pointer"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          color: discipline ? "var(--color-text)" : "var(--color-muted)",
-          borderRadius: "8px",
-          fontFamily: "var(--font-body)",
-        }}
+        className="select"
+        style={{ color: discipline ? "var(--color-text)" : "var(--color-muted)" }}
       >
         <option value="">Wszystkie dyscypliny</option>
         {DISCIPLINES.map((d) => (
@@ -99,17 +83,7 @@ export function FilterBar({ region, discipline }: FilterBarProps) {
 
       {/* Active filters indicator */}
       {(region !== "all" || discipline) && (
-        <button
-          onClick={() => {
-            const params = new URLSearchParams();
-            router.push(pathname);
-          }}
-          className="text-xs px-3 py-1.5 transition-colors"
-          style={{
-            color: "var(--color-muted)",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
+        <button onClick={() => router.push(pathname)} className="btn-ghost">
           × wyczyść filtry
         </button>
       )}

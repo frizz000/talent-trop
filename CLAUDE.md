@@ -67,24 +67,29 @@ Migration: `supabase/migrations/0001_initial_schema.sql`
 
 CSS variables: `--font-display`, `--font-body`, `--font-mono`
 
-### Color palette — narrow, disciplined
+### Color palette — Red Bull DNA (deep navy + racing red + gold), redesign 2026-07
 
-- Background: `#0f0f0f` (deep graphite, not pure black)
-- Surface: `#1a1a1a` (cards, sidebar)
-- Border: `#2a2a2a` (1px, flat — no shadows)
-- Text primary: `#f0f0f0`
-- Text muted: `#6b6b6b`
-- **Accent (CTA / highlights)**: `#e8351a` (electric red — Red Bull nod, not literal)
-- **Trend up**: `#84cc16` (lime green — rising talent score only)
-- **Trend down**: `#6b6b6b` (muted, not alarming)
+All defined as CSS vars in `globals.css`:
 
-### Layout rules
+- Background: `#0a0d17` (navy-black) + subtle fixed radial glows (red top-right, navy bottom-left)
+- Surface: `#111525` (cards, sidebar), elevated/hover: `#191f33` (`--color-surface-2`)
+- Border: `#232a42`, strong: `#333d5f`
+- Text primary: `#eef1f8`, muted: `#8a92ab`
+- **Accent**: `#e60d3f` (racing red), hover: `#ff3564` (`--color-accent-hover`)
+- **Gold**: `#ffc906` (`--color-gold`) — priority, brand fit, "partial" coverage, 1st place
+- **Orange**: `#fb923c` — "weak" coverage
+- **Trend up**: `#a3e635` (lime — rising talent score, "strong" coverage)
 
-- Flat cards with `1px` border, `border-color: #2a2a2a`, `border-radius: 8–12px`, **no drop-shadow**
+### Layout & motion rules
+
+- Cards: `.card` (surface, 1px border, radius 12px); interactive cards add `.hover-border-accent` (lift -2px + red edge + soft glow on hover)
+- Reusable classes in `globals.css`: `.chip` (tinted pill via currentColor), `.select` (styled dropdown), `.segmented` (toggle), `.btn-ghost`, `.score-bar`, `.zoom-media` (image scale on hover), `.stagger` (staggered fade-up entrance for grids), `.kicker`/`.page-title`/`.page-subtitle`
+- Shared `PageHeader` component (`src/components/PageHeader.tsx`) — kicker + display title with skewed red underline + optional actions slot; use on every page
+- Page transitions: `src/app/template.tsx` fades each navigation in; `prefers-reduced-motion` respected
 - **Asymmetric layouts** in News Hub (hero + sidebar) and Breakout Radar — never uniform equal-width card grids everywhere
 - Higher information density than typical SaaS — this is a work tool, not a marketing page
-- Photography-led (athlete photos, event images) — no abstract blobs or decorative icons
-- No gradients anywhere
+- Photography-led; sidebar uses inline SVG stroke icons (no emoji)
+- Gradients only as subtle ambience (body glow, hero image overlay, score bar) — never purple-blue SaaS gradients
 
 ## Auto-discovery filters (athletes table)
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 
 export const metadata = { title: "Gap Analysis — Talent Trop" };
 export const revalidate = 3600;
@@ -21,11 +22,11 @@ const COUNTRY_LABELS: Record<string, string> = {
 };
 
 const COVERAGE = {
-  strong:  { label: "Strong",  color: "#84cc16", bg: "#84cc1618" },
-  partial: { label: "Partial", color: "#f59e0b", bg: "#f59e0b18" },
-  weak:    { label: "Weak",    color: "#f97316", bg: "#f9731618" },
-  none:    { label: "Gap",     color: "#e8351a", bg: "#e8351a18" },
-  unknown: { label: "?",       color: "#6b6b6b", bg: "#6b6b6b10" },
+  strong:  { label: "Strong",  color: "#a3e635", bg: "#a3e63514" },
+  partial: { label: "Partial", color: "#ffc906", bg: "#ffc90614" },
+  weak:    { label: "Weak",    color: "#fb923c", bg: "#fb923c14" },
+  none:    { label: "Gap",     color: "#ff3564", bg: "#e60d3f1a" },
+  unknown: { label: "?",       color: "#8a92ab", bg: "#8a92ab0d" },
 } as const;
 
 type CoverageKey = keyof typeof COVERAGE;
@@ -222,36 +223,19 @@ export default async function GapAnalysisPage() {
 
   return (
     <div className="p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1
-          className="text-5xl font-bold uppercase tracking-tight leading-none"
-          style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
-        >
-          Gap Analysis
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-          Red Bull Heatmap — pokrycie dyscyplin Polska vs. inne kraje + liczba kandydatów w bazie
-        </p>
-      </div>
+      <PageHeader
+        kicker="Red Bull heatmap"
+        title="Gap Analysis"
+        subtitle="Pokrycie dyscyplin Polska vs. inne kraje + liczba kandydatów w bazie"
+      />
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <span className="text-xs stat" style={{ color: "var(--color-muted)" }}>
           Legenda:
         </span>
         {Object.entries(COVERAGE).map(([key, cfg]) => (
-          <span
-            key={key}
-            className="text-xs font-bold px-2 py-0.5"
-            style={{
-              backgroundColor: cfg.bg,
-              color: cfg.color,
-              border: `1px solid ${cfg.color}44`,
-              borderRadius: "4px",
-              fontFamily: "var(--font-mono)",
-            }}
-          >
+          <span key={key} className="chip" style={{ color: cfg.color }}>
             {cfg.label}
           </span>
         ))}
@@ -270,22 +254,16 @@ export default async function GapAnalysisPage() {
           >
             Największe luki w Polsce ({topOpportunities.length} dyscyplin)
           </p>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap stagger">
             {topOpportunities.map((g) => (
               <span
                 key={g.discipline}
-                className="text-xs font-bold uppercase px-2 py-1"
-                style={{
-                  backgroundColor: "#e8351a18",
-                  color: "#e8351a",
-                  border: "1px solid #e8351a44",
-                  borderRadius: "4px",
-                  fontFamily: "var(--font-display)",
-                }}
+                className="chip"
+                style={{ color: "var(--color-accent-hover)", fontSize: "0.72rem", padding: "4px 10px" }}
               >
                 {g.discipline}
                 {g.priority_score != null && (
-                  <span className="ml-1 stat" style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>
+                  <span className="ml-1.5" style={{ opacity: 0.65 }}>
                     {g.priority_score}
                   </span>
                 )}
@@ -318,15 +296,12 @@ export default async function GapAnalysisPage() {
           </p>
         </div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
+        <div className="card" style={{ overflow: "auto" }}>
           <table
             style={{
               borderCollapse: "collapse",
               width: "100%",
               minWidth: "640px",
-              border: "1px solid var(--color-border)",
-              borderRadius: "8px",
-              overflow: "hidden",
             }}
           >
             <thead>
@@ -431,9 +406,9 @@ export default async function GapAnalysisPage() {
                       fontWeight: 700,
                       color:
                         (gap.priority_score ?? 0) >= 80
-                          ? "var(--color-accent)"
+                          ? "var(--color-accent-hover)"
                           : (gap.priority_score ?? 0) >= 60
-                            ? "#f59e0b"
+                            ? "var(--color-gold)"
                             : "var(--color-muted)",
                       border: "1px solid var(--color-border)",
                     }}

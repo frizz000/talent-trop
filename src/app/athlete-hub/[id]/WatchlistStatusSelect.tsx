@@ -33,13 +33,9 @@ export function WatchlistStatusSelect({ athleteId, currentStatus }: Props) {
       value={currentStatus ?? ""}
       onChange={handleChange}
       disabled={isPending}
-      className="text-xs px-2 py-1"
+      className="select"
       style={{
-        backgroundColor: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "6px",
         color: currentStatus ? "var(--color-text)" : "var(--color-muted)",
-        fontFamily: "var(--font-mono)",
         cursor: isPending ? "not-allowed" : "pointer",
         opacity: isPending ? 0.6 : 1,
       }}

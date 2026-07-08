@@ -206,7 +206,7 @@ export function ScoreInfoButton() {
               <section>
                 <h3
                   className="text-xs uppercase tracking-wider mb-1 stat"
-                  style={{ color: "#f59e0b" }}
+                  style={{ color: "var(--color-gold)" }}
                 >
                   Brand Fit (0–100)
                 </h3>
@@ -226,7 +226,7 @@ export function ScoreInfoButton() {
                     <li key={f.name} className="flex gap-3 items-baseline">
                       <span
                         className="stat text-xs font-bold shrink-0 text-right"
-                        style={{ color: "#f59e0b", width: "42px" }}
+                        style={{ color: "var(--color-gold)", width: "42px" }}
                       >
                         0–25
                       </span>

@@ -70,9 +70,9 @@ function bestFederationBadge(profiles?: FederationProfile[]): string | null {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  signed: "#e8351a",
-  unsigned: "#6b6b6b",
-  unknown: "#2a2a2a",
+  signed: "#e60d3f",
+  unsigned: "#8a92ab",
+  unknown: "#4a5372",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -122,8 +122,8 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
     >
       {/* Photo / initials */}
       <div
-        className="relative"
-        style={{ height: "140px", backgroundColor: "var(--color-bg)" }}
+        className="relative zoom-media"
+        style={{ height: "150px", backgroundColor: "var(--color-bg)" }}
       >
         {avatarUrl && isSupabaseStorageUrl(avatarUrl) ? (
           <Image
@@ -159,16 +159,7 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
 
         {/* Discovery badge */}
         {athlete.discovery_status === "auto_detected" && (
-          <span
-            className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 self-start"
-            style={{
-              fontFamily: "var(--font-mono)",
-              backgroundColor: "var(--color-accent)22",
-              color: "var(--color-accent)",
-              border: "1px solid var(--color-accent)44",
-              borderRadius: "4px",
-            }}
-          >
+          <span className="chip self-start" style={{ color: "var(--color-gold)" }}>
             NOWY — do weryfikacji
           </span>
         )}
@@ -190,30 +181,29 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
 
         {/* Federation ranking badge */}
         {fedBadge && (
-          <span
-            className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 self-start"
-            style={{
-              fontFamily: "var(--font-mono)",
-              backgroundColor: "var(--color-bg)",
-              color: "var(--color-text)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "4px",
-            }}
-          >
+          <span className="chip self-start" style={{ color: "var(--color-muted)" }}>
             {fedBadge}
           </span>
         )}
 
         {/* Scores row */}
-        <div className="flex items-center gap-3 mt-1">
+        <div className="flex items-end gap-3 mt-1">
           {/* Talent score */}
-          <div>
-            <p
-              className="text-xs uppercase tracking-wider mb-0.5"
-              style={{ color: "var(--color-muted)", fontFamily: "var(--font-mono)" }}
-            >
-              Score
-            </p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline justify-between mb-1">
+              <p
+                className="text-[10px] uppercase tracking-wider"
+                style={{ color: "var(--color-muted)", fontFamily: "var(--font-mono)" }}
+              >
+                Score
+              </p>
+              <span
+                className="chip"
+                style={{ color: STATUS_COLORS[athlete.red_bull_status] }}
+              >
+                {STATUS_LABELS[athlete.red_bull_status]}
+              </span>
+            </div>
             <p
               className="text-2xl font-bold leading-none stat"
               style={{
@@ -222,23 +212,12 @@ export function AthleteCard({ athlete }: { athlete: Athlete }) {
             >
               {score != null ? score.toFixed(0) : "—"}
             </p>
+            {score != null && (
+              <div className="score-bar mt-1.5">
+                <span style={{ width: `${Math.min(100, Math.max(0, score))}%` }} />
+              </div>
+            )}
           </div>
-
-          <div style={{ flex: 1 }} />
-
-          {/* Red Bull status badge */}
-          <span
-            className="text-xs font-bold uppercase tracking-wider px-2 py-0.5"
-            style={{
-              fontFamily: "var(--font-display)",
-              backgroundColor: `${STATUS_COLORS[athlete.red_bull_status]}22`,
-              color: STATUS_COLORS[athlete.red_bull_status],
-              border: `1px solid ${STATUS_COLORS[athlete.red_bull_status]}44`,
-              borderRadius: "4px",
-            }}
-          >
-            {STATUS_LABELS[athlete.red_bull_status]}
-          </span>
         </div>
 
         {/* Bio */}

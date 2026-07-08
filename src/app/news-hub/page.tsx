@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 import { FilterBar } from "./FilterBar";
 import { ArticleHero } from "./ArticleHero";
 import { ArticleCard } from "./ArticleCard";
@@ -47,18 +48,11 @@ export default async function NewsHubPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-5">
-        <h1
-          className="text-5xl font-bold uppercase tracking-tight leading-none"
-          style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
-        >
-          News Hub
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-          Polskie i światowe wiadomości sportowe
-        </p>
-      </div>
+      <PageHeader
+        kicker="Media monitor"
+        title="News Hub"
+        subtitle="Polskie i światowe wiadomości sportowe"
+      />
 
       {/* Filters — client component needs Suspense for useSearchParams */}
       <Suspense fallback={<div style={{ height: "36px" }} />}>
@@ -95,7 +89,7 @@ export default async function NewsHubPage({ searchParams }: PageProps) {
       {/* Main layout: hero (2/3 width) + sidebar (1/3) */}
       {articles.length > 0 && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 stagger">
             {hero && (
               <div className="lg:col-span-2">
                 <ArticleHero article={hero} />
@@ -110,7 +104,7 @@ export default async function NewsHubPage({ searchParams }: PageProps) {
 
           {/* Secondary grid below */}
           {rest.length > 5 && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 stagger">
               {rest.slice(5).map((a) => (
                 <ArticleCard key={a.id} article={a} />
               ))}

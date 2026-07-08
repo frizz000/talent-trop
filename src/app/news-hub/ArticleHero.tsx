@@ -24,8 +24,8 @@ export function ArticleHero({ article }: { article: Article }) {
       style={{ height: "400px" }}
     >
       <div
-        className="card overflow-hidden relative h-full"
-        style={{ borderRadius: "10px" }}
+        className="card hover-border-accent overflow-hidden relative h-full zoom-media"
+        style={{ borderRadius: "14px" }}
       >
         {/* Background image */}
         {article.image_url ? (
@@ -34,14 +34,14 @@ export function ArticleHero({ article }: { article: Article }) {
             src={article.image_url}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ filter: "brightness(0.45)" }}
+            style={{ filter: "brightness(0.55)" }}
           />
         ) : (
           <div
             className="absolute inset-0"
             style={{
               background:
-                "repeating-linear-gradient(45deg, #1a1a1a 0, #1a1a1a 10px, #0f0f0f 10px, #0f0f0f 20px)",
+                "repeating-linear-gradient(45deg, #171c30 0, #171c30 10px, #0f1322 10px, #0f1322 20px)",
             }}
           />
         )}
@@ -51,7 +51,7 @@ export function ArticleHero({ article }: { article: Article }) {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to top, rgba(15,15,15,0.95) 0%, rgba(15,15,15,0.3) 60%, transparent 100%)",
+              "linear-gradient(to top, rgba(8,10,20,0.96) 0%, rgba(8,10,20,0.35) 55%, rgba(8,10,20,0.05) 100%)",
           }}
         />
 

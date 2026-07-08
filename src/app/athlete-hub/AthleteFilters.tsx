@@ -75,19 +75,13 @@ export function AthleteFilters({
   const hasFilters = !!(discipline || red_bull_status || discovery_status || age);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 mb-6">
+    <div className="flex flex-wrap items-center gap-2.5 mb-6">
       {/* Discipline */}
       <select
         value={discipline ?? ""}
         onChange={(e) => setParam("discipline", e.target.value || null)}
-        className="text-xs px-3 py-1.5 outline-none cursor-pointer"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          color: discipline ? "var(--color-text)" : "var(--color-muted)",
-          borderRadius: "8px",
-          fontFamily: "var(--font-body)",
-        }}
+        className="select"
+        style={{ color: discipline ? "var(--color-text)" : "var(--color-muted)" }}
       >
         <option value="">Dyscyplina</option>
         {disciplines.map((d) => (
@@ -99,14 +93,8 @@ export function AthleteFilters({
       <select
         value={age ?? ""}
         onChange={(e) => setParam("age", e.target.value || null)}
-        className="text-xs px-3 py-1.5 outline-none cursor-pointer"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          color: age ? "var(--color-trend-up)" : "var(--color-muted)",
-          borderRadius: "8px",
-          fontFamily: "var(--font-body)",
-        }}
+        className="select"
+        style={{ color: age ? "var(--color-trend-up)" : "var(--color-muted)" }}
       >
         <option value="">Wiek</option>
         {AGE_OPTIONS.map((o) => (
@@ -118,14 +106,8 @@ export function AthleteFilters({
       <select
         value={red_bull_status ?? ""}
         onChange={(e) => setParam("red_bull_status", e.target.value || null)}
-        className="text-xs px-3 py-1.5 outline-none cursor-pointer"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          color: red_bull_status ? "var(--color-text)" : "var(--color-muted)",
-          borderRadius: "8px",
-          fontFamily: "var(--font-body)",
-        }}
+        className="select"
+        style={{ color: red_bull_status ? "var(--color-text)" : "var(--color-muted)" }}
       >
         <option value="">Status Red Bull</option>
         {RED_BULL_STATUSES.map((s) => (
@@ -137,14 +119,8 @@ export function AthleteFilters({
       <select
         value={discovery_status ?? ""}
         onChange={(e) => setParam("discovery_status", e.target.value || null)}
-        className="text-xs px-3 py-1.5 outline-none cursor-pointer"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          color: discovery_status ? "var(--color-text)" : "var(--color-muted)",
-          borderRadius: "8px",
-          fontFamily: "var(--font-body)",
-        }}
+        className="select"
+        style={{ color: discovery_status ? "var(--color-text)" : "var(--color-muted)" }}
       >
         {DISCOVERY_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -155,14 +131,7 @@ export function AthleteFilters({
       <select
         value={sort ?? "talent_score"}
         onChange={(e) => setParam("sort", e.target.value)}
-        className="text-xs px-3 py-1.5 outline-none cursor-pointer"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          color: "var(--color-text)",
-          borderRadius: "8px",
-          fontFamily: "var(--font-body)",
-        }}
+        className="select"
       >
         {SORT_OPTIONS.map((s) => (
           <option key={s.value} value={s.value}>{s.label}</option>
@@ -171,18 +140,14 @@ export function AthleteFilters({
 
       {/* Count + clear */}
       <span
-        className="ml-auto text-xs"
-        style={{ color: "var(--color-muted)", fontFamily: "var(--font-mono)" }}
+        className="ml-auto text-xs stat"
+        style={{ color: "var(--color-muted)" }}
       >
         {total} zawodników
       </span>
 
       {hasFilters && (
-        <button
-          onClick={() => router.push(pathname)}
-          className="text-xs"
-          style={{ color: "var(--color-muted)", fontFamily: "var(--font-mono)" }}
-        >
+        <button onClick={() => router.push(pathname)} className="btn-ghost">
           × wyczyść
         </button>
       )}

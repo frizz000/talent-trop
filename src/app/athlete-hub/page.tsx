@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 import { AthleteFilters } from "./AthleteFilters";
 import { AthleteCard } from "./AthleteCard";
 import type { Athlete } from "./AthleteCard";
@@ -165,18 +166,11 @@ export default async function AthleteHubPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-5">
-        <h1
-          className="text-5xl font-bold uppercase tracking-tight leading-none"
-          style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
-        >
-          Athlete Hub
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-          Baza zawodników — filtruj, sortuj, eksploruj
-        </p>
-      </div>
+      <PageHeader
+        kicker="Baza talentów"
+        title="Athlete Hub"
+        subtitle="Baza zawodników — filtruj, sortuj, eksploruj"
+      />
 
       {/* Filters */}
       <Suspense fallback={<div style={{ height: "36px" }} />}>
@@ -220,7 +214,7 @@ export default async function AthleteHubPage({ searchParams }: PageProps) {
 
       {/* Athletes grid */}
       {athletes.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger">
           {athletes.map((athlete) => (
             <AthleteCard key={athlete.id} athlete={athlete} />
           ))}

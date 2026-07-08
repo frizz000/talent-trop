@@ -11,29 +11,38 @@ export function ArticleCard({ article }: { article: Article }) {
       className="block group"
     >
       <div
-        className="card hover-border-accent flex gap-3 p-3 transition-colors"
+        className="card hover-border-accent flex gap-3 p-3"
       >
         {/* Thumbnail */}
         {article.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={article.image_url}
-            alt=""
-            className="object-cover shrink-0"
-            style={{ width: "68px", height: "68px", borderRadius: "6px" }}
-          />
+          <div
+            className="zoom-media shrink-0"
+            style={{ width: "68px", height: "68px", borderRadius: "8px" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={article.image_url}
+              alt=""
+              className="object-cover w-full h-full"
+            />
+          </div>
         ) : (
           <div
-            className="shrink-0 flex items-center justify-center text-lg"
+            className="shrink-0 flex items-center justify-center"
             style={{
               width: "68px",
               height: "68px",
-              borderRadius: "6px",
+              borderRadius: "8px",
               backgroundColor: "var(--color-bg)",
               border: "1px solid var(--color-border)",
+              color: "var(--color-border-strong)",
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontStyle: "italic",
+              fontSize: "15px",
             }}
           >
-            📰
+            TT
           </div>
         )}
 

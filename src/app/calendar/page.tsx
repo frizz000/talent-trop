@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 import { CalendarFilters } from "./CalendarFilters";
 
 export const metadata = { title: "Kalendarz — Talent Trop" };
@@ -12,12 +13,12 @@ type PageProps = {
 
 const IMPORTANCE_CONFIG: Record<
   string,
-  { label: string; color: string; bg: string }
+  { label: string; color: string }
 > = {
-  major:         { label: "Major", color: "#e8351a", bg: "#e8351a18" },
-  international: { label: "Intl",  color: "#f59e0b", bg: "#f59e0b18" },
-  national:      { label: "Kraj",  color: "#84cc16", bg: "#84cc1618" },
-  minor:         { label: "Minor", color: "#6b6b6b", bg: "#6b6b6b15" },
+  major:         { label: "Major", color: "#ff3564" },
+  international: { label: "Intl",  color: "#ffc906" },
+  national:      { label: "Kraj",  color: "#a3e635" },
+  minor:         { label: "Minor", color: "#8a92ab" },
 };
 
 type Event = {
@@ -59,7 +60,7 @@ function EventRow({ event }: { event: Event }) {
 
   return (
     <div
-      className="flex items-start gap-4 px-4 py-3"
+      className="hover-surface flex items-start gap-4 px-4 py-3"
       style={{ borderBottom: "1px solid var(--color-border)" }}
     >
       {/* Date */}
@@ -100,16 +101,7 @@ function EventRow({ event }: { event: Event }) {
           >
             {event.name}
           </h3>
-          <span
-            className="text-xs font-bold px-1.5 py-0.5"
-            style={{
-              backgroundColor: cfg.bg,
-              color: cfg.color,
-              border: `1px solid ${cfg.color}44`,
-              borderRadius: "4px",
-              fontFamily: "var(--font-mono)",
-            }}
-          >
+          <span className="chip" style={{ color: cfg.color }}>
             {cfg.label}
           </span>
         </div>
@@ -200,18 +192,11 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1
-          className="text-5xl font-bold uppercase tracking-tight leading-none"
-          style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
-        >
-          Kalendarz
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-          Nadchodzące zawody — {events.length} wydarzeń
-        </p>
-      </div>
+      <PageHeader
+        kicker="Event pipeline"
+        title="Kalendarz"
+        subtitle={`Nadchodzące zawody — ${events.length} wydarzeń`}
+      />
 
       {/* Filters */}
       <Suspense fallback={<div style={{ height: "36px" }} />}>
@@ -247,13 +232,24 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
       {/* Timeline grouped by week */}
       {sortedWeeks.length > 0 && (
-        <div className="space-y-8">
+        <div className="space-y-8 stagger">
           {sortedWeeks.map(([weekKey, weekEvents]) => (
             <section key={weekKey}>
               <h2
-                className="text-xs uppercase tracking-widest mb-3 stat"
+                className="flex items-center gap-2 text-xs uppercase tracking-widest mb-3 stat"
                 style={{ color: "var(--color-muted)" }}
               >
+                <span
+                  aria-hidden
+                  style={{
+                    width: "14px",
+                    height: "3px",
+                    background: "var(--color-accent)",
+                    transform: "skewX(-18deg)",
+                    borderRadius: "1px",
+                    display: "inline-block",
+                  }}
+                />
                 {formatWeekHeader(weekKey)}
               </h2>
               <div

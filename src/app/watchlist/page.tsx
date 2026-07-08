@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 
 export const metadata = { title: "Watchlist — Talent Trop" };
 export const revalidate = 60;
@@ -10,11 +11,11 @@ type WatchlistStatus = (typeof STATUS_ORDER)[number];
 
 const STATUS_CONFIG: Record<
   WatchlistStatus,
-  { label: string; color: string; bg: string }
+  { label: string; color: string }
 > = {
-  recommended: { label: "Rekomendowany", color: "#84cc16", bg: "#84cc1618" },
-  contacted:   { label: "Kontakt nawiązany", color: "#f59e0b", bg: "#f59e0b18" },
-  watching:    { label: "Obserwuję", color: "#6b6b6b", bg: "#6b6b6b15" },
+  recommended: { label: "Rekomendowany", color: "#a3e635" },
+  contacted:   { label: "Kontakt nawiązany", color: "#ffc906" },
+  watching:    { label: "Obserwuję", color: "#8a92ab" },
 };
 
 type WatchedAthlete = {
@@ -94,18 +95,11 @@ export default async function WatchlistPage() {
 
   return (
     <div className="p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1
-          className="text-5xl font-bold uppercase tracking-tight leading-none"
-          style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
-        >
-          Watchlist
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-          Prywatna warstwa CRM — {total} zawodnik{total === 1 ? "" : "ów"} obserwowanych
-        </p>
-      </div>
+      <PageHeader
+        kicker="Scout CRM"
+        title="Watchlist"
+        subtitle={`Prywatna warstwa CRM — ${total} zawodnik${total === 1 ? "" : "ów"} obserwowanych`}
+      />
 
       {total === 0 ? (
         <div className="card p-6 max-w-lg">
@@ -121,7 +115,7 @@ export default async function WatchlistPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-8 stagger">
           {STATUS_ORDER.map((status) => {
             const list = grouped[status];
             if (list.length === 0) return null;
@@ -131,16 +125,7 @@ export default async function WatchlistPage() {
               <section key={status}>
                 {/* Section header */}
                 <div className="flex items-center gap-3 mb-3">
-                  <span
-                    className="text-xs font-bold uppercase tracking-wider px-2 py-0.5"
-                    style={{
-                      backgroundColor: cfg.bg,
-                      color: cfg.color,
-                      border: `1px solid ${cfg.color}44`,
-                      borderRadius: "4px",
-                      fontFamily: "var(--font-display)",
-                    }}
-                  >
+                  <span className="chip" style={{ color: cfg.color }}>
                     {cfg.label}
                   </span>
                   <span className="stat text-xs" style={{ color: "var(--color-muted)" }}>

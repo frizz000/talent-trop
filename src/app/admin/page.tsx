@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 
 export const metadata = { title: "Admin — Talent Trop" };
 export const revalidate = 60;
@@ -15,9 +16,9 @@ type IngestionRun = {
 };
 
 const STATUS_CONFIG = {
-  running: { label: "Running",  color: "#f59e0b", dot: "●" },
-  success: { label: "Success",  color: "#84cc16", dot: "●" },
-  error:   { label: "Error",    color: "#e8351a", dot: "●" },
+  running: { label: "Running",  color: "#ffc906", dot: "●" },
+  success: { label: "Success",  color: "#a3e635", dot: "●" },
+  error:   { label: "Error",    color: "#ff3564", dot: "●" },
 } as const;
 
 function durationStr(start: string, end: string | null): string {
@@ -73,21 +74,14 @@ export default async function AdminPage() {
 
   return (
     <div className="p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1
-          className="text-5xl font-bold uppercase tracking-tight leading-none"
-          style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
-        >
-          Admin
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-          Pipeline observability — ostatnie 30 uruchomień
-        </p>
-      </div>
+      <PageHeader
+        kicker="Pipeline observability"
+        title="Admin"
+        subtitle="Ostatnie 30 uruchomień pipeline'u"
+      />
 
       {/* Summary KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 stagger">
         {[
           {
             label: "Uruchomień 24h",

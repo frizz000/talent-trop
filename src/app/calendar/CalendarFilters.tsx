@@ -35,14 +35,8 @@ export function CalendarFilters({ disciplines, discipline, importance, total }: 
       <select
         value={discipline ?? ""}
         onChange={(e) => update("discipline", e.target.value)}
-        className="text-xs px-2 py-1.5"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "6px",
-          color: discipline ? "var(--color-text)" : "var(--color-muted)",
-          fontFamily: "var(--font-mono)",
-        }}
+        className="select"
+        style={{ color: discipline ? "var(--color-text)" : "var(--color-muted)" }}
       >
         <option value="">Wszystkie dyscypliny</option>
         {disciplines.map((d) => (
@@ -55,14 +49,8 @@ export function CalendarFilters({ disciplines, discipline, importance, total }: 
       <select
         value={importance ?? ""}
         onChange={(e) => update("importance", e.target.value)}
-        className="text-xs px-2 py-1.5"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "6px",
-          color: importance ? "var(--color-text)" : "var(--color-muted)",
-          fontFamily: "var(--font-mono)",
-        }}
+        className="select"
+        style={{ color: importance ? "var(--color-text)" : "var(--color-muted)" }}
       >
         <option value="">Wszystkie rangi</option>
         {Object.entries(IMPORTANCE_LABELS).map(([k, v]) => (
@@ -73,19 +61,8 @@ export function CalendarFilters({ disciplines, discipline, importance, total }: 
       </select>
 
       {hasFilters && (
-        <button
-          onClick={() => router.push(pathname)}
-          className="text-xs px-3 py-1.5"
-          style={{
-            backgroundColor: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "6px",
-            color: "var(--color-muted)",
-            fontFamily: "var(--font-mono)",
-            cursor: "pointer",
-          }}
-        >
-          Wyczyść
+        <button onClick={() => router.push(pathname)} className="btn-ghost">
+          × wyczyść
         </button>
       )}
 

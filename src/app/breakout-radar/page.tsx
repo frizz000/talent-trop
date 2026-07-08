@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 
 export const metadata = { title: "Breakout Radar — Talent Trop" };
 export const revalidate = 300;
@@ -156,11 +157,11 @@ function HeroCard({ athlete }: { athlete: AthleteWithDelta }) {
       >
         {/* Photo / initials */}
         <div
+          className="zoom-media"
           style={{
             height: "120px",
             backgroundColor: "var(--color-bg)",
             position: "relative",
-            overflow: "hidden",
           }}
         >
           {athlete.photo_url ? (
@@ -189,9 +190,10 @@ function HeroCard({ athlete }: { athlete: AthleteWithDelta }) {
               position: "absolute",
               top: "8px",
               right: "8px",
-              backgroundColor: "#0f0f0fcc",
+              backgroundColor: "rgba(10,13,23,0.82)",
+              backdropFilter: "blur(4px)",
               padding: "4px 8px",
-              borderRadius: "6px",
+              borderRadius: "7px",
               border: "1px solid var(--color-border)",
             }}
           >
@@ -292,7 +294,7 @@ function BreakthroughFeed({ articles }: { articles: BreakthroughArticle[] }) {
           className="text-xs uppercase tracking-wider stat"
           style={{ color: "var(--color-accent)" }}
         >
-          🔥 Sygnały przełomu z newsów (LLM)
+          ▲ Sygnały przełomu z newsów (LLM)
         </h2>
       </div>
       {articles.map((a) => (
@@ -302,13 +304,8 @@ function BreakthroughFeed({ articles }: { articles: BreakthroughArticle[] }) {
           style={{ borderBottom: "1px solid var(--color-border)" }}
         >
           <span
-            className="stat text-xs font-bold px-2 py-0.5 shrink-0 mt-0.5"
-            style={{
-              backgroundColor: "var(--color-accent)22",
-              color: "var(--color-accent)",
-              border: "1px solid var(--color-accent)44",
-              borderRadius: "4px",
-            }}
+            className="chip shrink-0 mt-0.5"
+            style={{ color: "var(--color-accent-hover)" }}
           >
             {BREAKTHROUGH_LABELS[a.breakthrough_type ?? ""] ?? "PRZEŁOM"}
           </span>
@@ -394,7 +391,7 @@ async function BreakoutContent({ windowDays }: { windowDays: number }) {
       ) : (
         <>
           {/* Top 3 hero cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 stagger">
             {heroes.map((a) => (
               <HeroCard key={a.id} athlete={a} />
             ))}
@@ -431,48 +428,24 @@ export default async function BreakoutRadarPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 lg:p-8">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
-        <div>
-          <h1
-            className="text-5xl font-bold uppercase tracking-tight leading-none"
-            style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
-          >
-            Breakout Radar
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-            Zawodnicy z największym wzrostem talent score
-          </p>
-        </div>
-
-        {/* Window toggle */}
-        <div
-          className="flex gap-1 p-1"
-          style={{
-            backgroundColor: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "8px",
-          }}
-        >
-          {[7, 30].map((d) => (
-            <a
-              key={d}
-              href={`?window=${d}`}
-              className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider"
-              style={{
-                borderRadius: "6px",
-                fontFamily: "var(--font-mono)",
-                backgroundColor:
-                  windowDays === d ? "var(--color-accent)" : "transparent",
-                color: windowDays === d ? "#fff" : "var(--color-muted)",
-                textDecoration: "none",
-              }}
-            >
-              {d}d
-            </a>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        kicker="Momentum tracker"
+        title="Breakout Radar"
+        subtitle="Zawodnicy z największym wzrostem talent score"
+        actions={
+          <div className="segmented">
+            {[7, 30].map((d) => (
+              <a
+                key={d}
+                href={`?window=${d}`}
+                className={windowDays === d ? "active" : undefined}
+              >
+                {d}d
+              </a>
+            ))}
+          </div>
+        }
+      />
 
       {!isSupabaseConfigured() ? (
         <div className="card p-6 max-w-lg">
