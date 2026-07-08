@@ -24,6 +24,9 @@ function Icon({ d, extra }: { d: string; extra?: React.ReactNode }) {
 }
 
 const ICONS: Record<string, React.ReactNode> = {
+  search: (
+    <Icon d="m21 21-4.34-4.34" extra={<circle cx="11" cy="11" r="8" />} />
+  ),
   news: (
     <Icon d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0V7M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
   ),
@@ -61,6 +64,7 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 const NAV_ITEMS = [
+  { href: "/search",         label: "Wyszukiwanie",   icon: "search" },
   { href: "/news-hub",       label: "News Hub",       icon: "news" },
   { href: "/athlete-hub",    label: "Athlete Hub",    icon: "athletes" },
   { href: "/gap-analysis",   label: "Gap Analysis",   icon: "gaps" },

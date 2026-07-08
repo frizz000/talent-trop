@@ -48,6 +48,7 @@ Migration: `supabase/migrations/0001_initial_schema.sql`
 
 | Route | Module | Status |
 |---|---|---|
+| `/search` | Wyszukiwanie — ad-hoc live research zawodnika (Serper + Claude Haiku + Apify, `POST /api/search-athlete`); narzędzie ręczne, NIE podlega pipeline switches; wymaga `SERPER_API_KEY`/`ANTHROPIC_API_KEY`/`APIFY_API_TOKEN` w env Vercela | Done |
 | `/news-hub` | News Hub — magazine grid, Poland/World toggle, discipline filter | Skeleton |
 | `/athlete-hub` | Athlete Hub — athlete cards grid with filters | Skeleton |
 | `/gap-analysis` | Gap Analysis / Red Bull Heatmap — discipline × coverage matrix | Skeleton |
