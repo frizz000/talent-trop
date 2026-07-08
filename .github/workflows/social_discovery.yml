@@ -1,0 +1,33 @@
+name: Social Discovery & Brand Fit
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Monday 08:00 UTC (weekly)
+  workflow_dispatch:
+
+jobs:
+  social_discovery:
+    name: Discover social profiles + compute brand fit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run social discovery
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+        run: python scripts/social_discovery.py
