@@ -30,7 +30,7 @@ jobs:
           fi
           RESPONSE=$(curl -sf --max-time 20 \
             -H "x-pipeline-check-key: $PIPELINE_CHECK_SECRET" \
-            "https://talent-trop.vercel.app/api/pipeline-status?workflow=process" || true)
+            "https://talent-trop-henna.vercel.app/api/pipeline-status?workflow=process" || true)
           echo "pipeline-status: $RESPONSE"
           SHOULD_RUN=$(echo "$RESPONSE" | jq -r '.should_run' 2>/dev/null || echo "")
           if [ "$SHOULD_RUN" = "false" ]; then

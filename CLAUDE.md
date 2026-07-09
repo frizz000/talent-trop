@@ -151,7 +151,7 @@ Source scrapers: `scripts/sources/` package.
 
 ## Pipeline switches (migration `0008`)
 
-Global + per-workflow on/off toggles controlled from `/admin` (section "Kontrola Pipeline'u"), stored in `pipeline_settings` (singleton id=1, master switch) and `workflow_settings` (`workflow_id` PK). Every GH Actions workflow starts with a `check-pipeline-status` step: curl `GET https://talent-trop.vercel.app/api/pipeline-status?workflow=<id>` with header `x-pipeline-check-key: $PIPELINE_CHECK_SECRET` (GitHub secret + Vercel env, same value); `should_run = global && workflow`. If false, all later steps are skipped (crons keep firing — zero-cost early exit). Fail-open: endpoint error/unknown `workflow_id` → run anyway (warning logged). `workflow_dispatch` input `force_run: true` bypasses the check. `workflow_id` ↔ `.yml` map: `src/lib/workflows.ts`.
+Global + per-workflow on/off toggles controlled from `/admin` (section "Kontrola Pipeline'u"), stored in `pipeline_settings` (singleton id=1, master switch) and `workflow_settings` (`workflow_id` PK). Every GH Actions workflow starts with a `check-pipeline-status` step: curl `GET https://talent-trop-henna.vercel.app/api/pipeline-status?workflow=<id>` (uwaga: `talent-trop.vercel.app` bez `-henna` to obcy/stary deployment spoza tego konta Vercela) with header `x-pipeline-check-key: $PIPELINE_CHECK_SECRET` (GitHub secret + Vercel env, same value); `should_run = global && workflow`. If false, all later steps are skipped (crons keep firing — zero-cost early exit). Fail-open: endpoint error/unknown `workflow_id` → run anyway (warning logged). `workflow_dispatch` input `force_run: true` bypasses the check. `workflow_id` ↔ `.yml` map: `src/lib/workflows.ts`.
 
 ## Talent Score algorithm
 
