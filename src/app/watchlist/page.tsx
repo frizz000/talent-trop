@@ -99,6 +99,18 @@ export default async function WatchlistPage() {
         kicker="Scout CRM"
         title="Watchlist"
         subtitle={`Prywatna warstwa CRM — ${total} zawodnik${total === 1 ? "" : "ów"} obserwowanych`}
+        actions={
+          total > 0 ? (
+            <a
+              href="/watchlist/export"
+              className="btn-ghost"
+              style={{ textDecoration: "none", border: "1px solid var(--color-border)" }}
+              download
+            >
+              ↓ Eksport CSV
+            </a>
+          ) : undefined
+        }
       />
 
       {total === 0 ? (
