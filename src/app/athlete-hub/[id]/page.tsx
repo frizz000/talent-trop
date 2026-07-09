@@ -6,38 +6,70 @@ import { isSupabaseConfigured } from "@/lib/utils";
 import { ScoutNoteForm } from "./ScoutNoteForm";
 import { ScoreInfoButton } from "./ScoreInfoButton";
 import { WatchlistStatusSelect } from "./WatchlistStatusSelect";
+import { ScoreTrendChart } from "./ScoreTrendChart";
 import { updateDiscoveryStatus } from "./actions";
 
 export const revalidate = 60;
 
 type Props = { params: Promise<{ id: string }> };
 
-function Sparkline({ scores }: { scores: number[] }) {
-  if (scores.length < 2) return null;
-  const min = Math.min(...scores);
-  const max = Math.max(...scores);
-  const range = max - min || 1;
-  const W = 200, H = 44;
-  const pts = scores
-    .map((s, i) => {
-      const x = (i / (scores.length - 1)) * W;
-      const y = H - ((s - min) / range) * (H * 0.85) - H * 0.075;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
+type SimilarAthlete = {
+  id: string;
+  name: string;
+  discipline: string;
+  birth_date: string | null;
+  talent_score: number | null;
+  photo_url: string | null;
+  age?: number | null;
+};
+
+/**
+ * Benchmarking à la TransferRoom "comparison players": same discipline,
+ * closest talent score + age. Scored in JS — Postgres can't order by abs().
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+async function fetchSimilarAthletes(
+  supabase: any,
+  athlete: { id: string; discipline: string; talent_score: number | null; birth_date: string | null }
+): Promise<SimilarAthlete[]> {
+  if (athlete.talent_score == null) return [];
+  const { data } = await supabase
+    .from("athletes")
+    .select("id, name, discipline, birth_date, talent_score, photo_url")
+    .eq("discipline", athlete.discipline)
+    .neq("id", athlete.id)
+    .neq("discovery_status", "rejected")
+    .not("talent_score", "is", null)
+    .limit(200);
+
+  const refScore = Number(athlete.talent_score);
+  const refAge = athlete.birth_date
+    ? (Date.now() - new Date(athlete.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+    : null;
+
+  return ((data ?? []) as SimilarAthlete[])
+    .map((a) => {
+      const scoreDiff = Math.abs(Number(a.talent_score) - refScore);
+      const otherAge = a.birth_date
+        ? (Date.now() - new Date(a.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+        : null;
+      // Unknown age on either side → mild penalty instead of excluding
+      const ageDiff = refAge != null && otherAge != null ? Math.abs(refAge - otherAge) : 4;
+      return { athlete: a, distance: scoreDiff + ageDiff * 1.5 };
     })
-    .join(" ");
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
-      <polyline
-        points={pts}
-        fill="none"
-        stroke="var(--color-trend-up)"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 4)
+    .map((s) => ({
+      ...s.athlete,
+      age: s.athlete.birth_date
+        ? Math.floor(
+            (Date.now() - new Date(s.athlete.birth_date).getTime()) /
+              (365.25 * 24 * 60 * 60 * 1000)
+          )
+        : null,
+    }));
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 const RB_LABELS: Record<string, string> = {
   signed: "Red Bull Signed",
@@ -102,7 +134,7 @@ export default async function AthleteProfilePage({ params }: Props) {
       .select("score, computed_at, factors")
       .eq("athlete_id", id)
       .order("computed_at", { ascending: true })
-      .limit(30),
+      .limit(90),
     supabase
       .from("brand_fit_scores")
       .select("score, factors, computed_at")
@@ -134,6 +166,8 @@ export default async function AthleteProfilePage({ params }: Props) {
       .order("ranking_position", { ascending: true }),
   ]);
 
+  const similar = await fetchSimilarAthletes(supabase, athlete);
+
   const history = historyRes.data ?? [];
   const brandFit = brandFitRes.data;
   const notes = notesRes.data ?? [];
@@ -141,7 +175,6 @@ export default async function AthleteProfilePage({ params }: Props) {
   const news = newsRes.data ?? [];
   const fedProfiles = fedRes.data ?? [];
 
-  const scores = history.map((h) => Number(h.score));
   const latestFactors =
     history.length > 0
       ? (history[history.length - 1].factors as Record<string, number> | null)
@@ -316,6 +349,13 @@ export default async function AthleteProfilePage({ params }: Props) {
             <Suspense>
               <WatchlistStatusSelect athleteId={id} currentStatus={athlete.watchlist_status ?? null} />
             </Suspense>
+            <Link
+              href={`/compare?ids=${athlete.id}`}
+              className="btn-ghost"
+              style={{ textDecoration: "none" }}
+            >
+              ⇄ Porównaj
+            </Link>
           </div>
 
           {/* Score + sparkline */}
@@ -343,18 +383,6 @@ export default async function AthleteProfilePage({ params }: Props) {
                   : "—"}
               </p>
             </div>
-
-            {scores.length >= 2 && (
-              <div>
-                <p
-                  className="text-xs uppercase tracking-wider mb-2 stat"
-                  style={{ color: "var(--color-muted)" }}
-                >
-                  Trend ({scores.length} pkt)
-                </p>
-                <Sparkline scores={scores} />
-              </div>
-            )}
 
             {brandFit?.score != null && (
               <div>
@@ -385,6 +413,30 @@ export default async function AthleteProfilePage({ params }: Props) {
           )}
         </div>
       </div>
+
+      {/* Talent score history */}
+      {history.length >= 2 && (
+        <div className="card p-4 mb-6">
+          <div className="flex items-baseline justify-between mb-3 gap-4 flex-wrap">
+            <h2
+              className="text-sm font-bold uppercase tracking-wider"
+              style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
+            >
+              Historia Talent Score
+            </h2>
+            <span className="stat text-xs" style={{ color: "var(--color-muted)" }}>
+              {history.length} pomiarów · ostatni{" "}
+              {new Date(history[history.length - 1].computed_at).toLocaleDateString("pl-PL")}
+            </span>
+          </div>
+          <ScoreTrendChart
+            points={history.map((h) => ({
+              date: h.computed_at,
+              score: Number(h.score),
+            }))}
+          />
+        </div>
+      )}
 
       {/* Score breakdown */}
       {latestFactors && Object.keys(latestFactors).length > 0 && (
@@ -716,6 +768,62 @@ export default async function AthleteProfilePage({ params }: Props) {
           <ScoutNoteForm athleteId={id} />
         </div>
       </div>
+
+      {/* Similar athletes — same discipline, closest score + age */}
+      {similar.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-baseline justify-between mb-3 gap-4 flex-wrap">
+            <h2
+              className="text-sm font-bold uppercase tracking-wider"
+              style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}
+            >
+              Podobni zawodnicy
+            </h2>
+            <span className="text-xs" style={{ color: "var(--color-muted)" }}>
+              {athlete.discipline} — zbliżony score i wiek
+            </span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
+            {similar.map((s) => {
+              const sAge = s.age ?? null;
+              return (
+                <div key={s.id} className="card hover-border-accent p-4 flex flex-col gap-1">
+                  <Link
+                    href={`/athlete-hub/${s.id}`}
+                    className="hover-underline text-base font-bold uppercase leading-tight"
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      color: "var(--color-text)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    {s.name}
+                  </Link>
+                  <p className="text-xs" style={{ color: "var(--color-muted)" }}>
+                    {sAge != null ? <span className="stat">{sAge} lat</span> : "wiek nieznany"}
+                  </p>
+                  <div className="flex items-end justify-between mt-auto pt-2">
+                    <p
+                      className="stat text-2xl font-bold leading-none"
+                      style={{ color: "var(--color-trend-up)" }}
+                    >
+                      {s.talent_score != null ? Number(s.talent_score).toFixed(0) : "—"}
+                    </p>
+                    <Link
+                      href={`/compare?ids=${athlete.id},${s.id}`}
+                      className="btn-ghost"
+                      style={{ textDecoration: "none" }}
+                      title="Porównaj obu zawodników"
+                    >
+                      ⇄ Porównaj
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <ScoreInfoButton />
     </div>
