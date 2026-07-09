@@ -49,6 +49,9 @@ const ICONS: Record<string, React.ReactNode> = {
   radar: (
     <Icon d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
   ),
+  compare: (
+    <Icon d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4" />
+  ),
   calendar: (
     <Icon
       d="M16 2v4M8 2v4M3 10h18"
@@ -67,6 +70,7 @@ const NAV_ITEMS = [
   { href: "/search",         label: "Wyszukiwanie",   icon: "search" },
   { href: "/news-hub",       label: "News Hub",       icon: "news" },
   { href: "/athlete-hub",    label: "Athlete Hub",    icon: "athletes" },
+  { href: "/compare",        label: "Porównywarka",   icon: "compare" },
   { href: "/gap-analysis",   label: "Gap Analysis",   icon: "gaps" },
   { href: "/breakout-radar", label: "Breakout Radar", icon: "radar" },
   { href: "/calendar",       label: "Kalendarz",      icon: "calendar" },
