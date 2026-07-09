@@ -17,6 +17,11 @@ on:
         type: boolean
         required: false
         default: false
+      force_run:
+        description: "Uruchom mimo wyłączenia pipeline'u w Admin panelu"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   ingest:
@@ -24,10 +29,36 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # workflow_id: ingest_federations (tabela workflow_settings, sterowane z /admin)
+      - name: Check pipeline status
+        id: check-pipeline-status
+        env:
+          PIPELINE_CHECK_SECRET: ${{ secrets.PIPELINE_CHECK_SECRET }}
+        run: |
+          if [ "${{ github.event.inputs.force_run }}" = "true" ]; then
+            echo "force_run=true — pomijam sprawdzenie statusu, wymuszam uruchomienie"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          RESPONSE=$(curl -sf --max-time 20 \
+            -H "x-pipeline-check-key: $PIPELINE_CHECK_SECRET" \
+            "https://talent-trop.vercel.app/api/pipeline-status?workflow=ingest_federations" || true)
+          echo "pipeline-status: $RESPONSE"
+          SHOULD_RUN=$(echo "$RESPONSE" | jq -r '.should_run' 2>/dev/null || echo "")
+          if [ "$SHOULD_RUN" = "false" ]; then
+            echo "::notice::Pipeline lub ten workflow jest wyłączony w Admin panelu — pomijam"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            # fail-open: brak/błędna odpowiedź endpointu nie blokuje crona
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: steps.check-pipeline-status.outputs.should_run == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: steps.check-pipeline-status.outputs.should_run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -35,9 +66,11 @@ jobs:
           cache-dependency-path: scripts/requirements.txt
 
       - name: Install dependencies
+        if: steps.check-pipeline-status.outputs.should_run == 'true'
         run: pip install -r scripts/requirements.txt
 
       - name: Run federation ingestion
+        if: steps.check-pipeline-status.outputs.should_run == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
