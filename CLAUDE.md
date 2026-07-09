@@ -49,12 +49,13 @@ Migration: `supabase/migrations/0001_initial_schema.sql`
 | Route | Module | Status |
 |---|---|---|
 | `/search` | Wyszukiwanie — ad-hoc live research zawodnika (Serper + Claude Haiku + Apify, `POST /api/search-athlete`); narzędzie ręczne, NIE podlega pipeline switches; wymaga `SERPER_API_KEY`/`ANTHROPIC_API_KEY`/`APIFY_API_TOKEN` w env Vercela | Done |
-| `/news-hub` | News Hub — magazine grid, Poland/World toggle, discipline filter | Skeleton |
-| `/athlete-hub` | Athlete Hub — athlete cards grid with filters | Skeleton |
-| `/gap-analysis` | Gap Analysis / Red Bull Heatmap — discipline × coverage matrix | Skeleton |
-| `/breakout-radar` | Breakout Radar — athletes with biggest score jumps last 7/30d | Skeleton |
-| `/calendar` | Events Calendar — upcoming competitions by discipline | Skeleton |
-| `/watchlist` | Scout Notes / Watchlist — private CRM layer | Skeleton |
+| `/news-hub` | News Hub — magazine grid, Poland/World toggle, discipline filter | Done |
+| `/athlete-hub` | Athlete Hub — athlete cards grid with filters; profile: score history chart, factor breakdown, similar athletes, federation rankings | Done |
+| `/compare` | Porównywarka — side-by-side do 4 zawodników (Talent Score + składowe, Brand Fit, rankingi federacji, wzmianki 30d, IG); picker z live search (server action), stan w `?ids=` | Done |
+| `/gap-analysis` | Gap Analysis / Red Bull Heatmap — discipline × coverage matrix | Done |
+| `/breakout-radar` | Breakout Radar — athletes with biggest score jumps last 7/30d | Done |
+| `/calendar` | Events Calendar — upcoming competitions by discipline | Done |
+| `/watchlist` | Scout Notes / Watchlist — private CRM layer; CSV export (`/watchlist/export`, BOM + średniki pod polski Excel) | Done |
 
 ## UX / Visual direction
 
@@ -176,7 +177,8 @@ Note: supabase-py uses snake_case (`maybe_single()`, not `maybeSingle()`).
 - [x] Week 1–2: Next.js skeleton + Supabase schema + UI navigation scaffolding
 - [x] Week 3–4: LLM layer (summaries + tagging), first talent_score, basic Athlete Hub with real data
 - [x] Week 5–6: Gap Analysis Heatmap, Breakout Radar, seed redbull_roster + discipline_gaps
-- [ ] Week 7+: Scout Notes, athlete comparison, admin/pipeline panel, social signals via Apify
+- [x] Week 7+: Scout Notes, athlete comparison (`/compare`), admin/pipeline panel
+- [ ] Later: social signals via Apify (`social_signals` table nadal pusta — `social_signal_factor` zawsze 0), event_results ingestion, alerty progowe (wymaga decyzji o kanale powiadomień)
 
 ## Env vars
 
