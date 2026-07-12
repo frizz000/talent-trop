@@ -19,7 +19,9 @@ import { extractJsonObject } from "@/lib/llm";
  * do podpięcia), które skaut zatwierdza w UI; zapis robi server action
  * applyEnrichment.
  *
- * Body: { athleteId: string }
+ * Body: { athleteId: string, ignoreBirthDate?: boolean }
+ * ignoreBirthDate — skaut oznaczył wiek w bazie jako błędny; rocznik nie
+ * wchodzi wtedy do kotwicy tożsamości (retry po mismatch/uncertain).
  */
 
 export const dynamic = "force-dynamic";
@@ -122,7 +124,8 @@ type LlmEnrichment = {
 
 async function enrichWithHaiku(
   athlete: AthleteRow,
-  results: SerperResult[]
+  results: SerperResult[],
+  ignoreBirthDate: boolean
 ): Promise<LlmEnrichment> {
   const client = new Anthropic();
 
@@ -139,25 +142,33 @@ async function enrichWithHaiku(
     : null;
   const knownInstagram = athlete.socials?.instagram ?? null;
 
+  const birthLine = ignoreBirthDate
+    ? "- Rocznik: NIEZNANY (skaut oznaczył wiek w bazie jako błędny — ustal go od zera z wyników)"
+    : `- Rocznik: ${birthYear ?? "NIEZNANY"}${athlete.birth_date ? ` (data w bazie: ${athlete.birth_date})` : ""}${birthYear ? " — UWAGA: wartość z automatycznego pipeline'u, NIEZWERYFIKOWANA i może być błędna" : ""}`;
+
   const profileLines = [
     `- Imię i nazwisko: ${athlete.name}`,
     `- Dyscyplina: ${athlete.discipline}${athlete.sub_discipline ? ` (${athlete.sub_discipline})` : ""}`,
-    `- Rocznik: ${birthYear ?? "NIEZNANY"}${athlete.birth_date ? ` (data w bazie: ${athlete.birth_date})` : ""}`,
+    birthLine,
     `- Miasto: ${athlete.hometown ?? "NIEZNANE"}`,
     `- Instagram: ${knownInstagram ?? "NIEZNANY"}`,
     `- Bio w bazie: ${athlete.bio_summary ?? "brak"}`,
   ].join("\n");
 
-  const prompt = `Jesteś analitykiem skautingu sportowego. W bazie mamy zawodnika o profilu (KOTWICA TOŻSAMOŚCI):
+  const prompt = `Jesteś analitykiem skautingu sportowego. W bazie mamy zawodnika o profilu:
 ${profileLines}
 
 Poniżej wyniki wyszukiwania Google dla tego zawodnika:
 ${snippets}
 
-NAJWAŻNIEJSZA ZASADA — TOŻSAMOŚĆ: wyniki mogą dotyczyć INNYCH osób o tym samym imieniu i nazwisku. Wykorzystuj WYŁĄCZNIE wyniki, które na pewno dotyczą zawodnika z profilu powyżej: zgodna dyscyplina, brak sprzeczności wieku / miasta / klubu. Wynik o osobie z innej dyscypliny lub o sprzecznym kontekście POMIŃ całkowicie — lepiej nie zaproponować nic, niż pomieszać dwie osoby.
+NAJWAŻNIEJSZA ZASADA — TOŻSAMOŚĆ: wyniki mogą dotyczyć INNYCH osób o tym samym imieniu i nazwisku. KOTWICĄ TOŻSAMOŚCI są: imię i nazwisko + DYSCYPLINA (+ miasto/klub, jeśli znane). Rocznik i bio z bazy pochodzą z automatycznego pipeline'u i bywają BŁĘDNE — traktuj je jako wskazówkę, NIE jako kryterium odrzucenia:
+- Jeśli wyniki spójnie opisują JEDNĄ osobę w tej samej dyscyplinie, ale z INNYM wiekiem niż w bazie → to niemal na pewno TEN zawodnik z błędnym rekordem: ustaw identity_match="confirmed" i zaproponuj poprawkę birth_date/birth_year z dowodem.
+- "mismatch" tylko gdy wyniki dotyczą osoby z INNEJ dyscypliny / innej roli (nie-sportowca) i nic nie pasuje do tego zawodnika.
+- "uncertain" gdy w TEJ SAMEJ dyscyplinie funkcjonuje kilka różnych osób o tym nazwisku i nie da się rozstrzygnąć, o którą chodzi.
+Wynik o osobie z innej dyscypliny POMIŃ całkowicie — lepiej nie zaproponować nic, niż pomieszać dwie osoby.
 
 Zadania:
-1. identity_match: "confirmed" gdy przynajmniej część wyników pewnie dotyczy tego zawodnika; "uncertain" gdy nie da się rozstrzygnąć; "mismatch" gdy wyniki dotyczą innych osób. identity_note: 1 zdanie uzasadnienia po polsku.
+1. identity_match jak wyżej; identity_note: 1 zdanie uzasadnienia po polsku.
 2. updates — zaproponuj TYLKO pola, dla których znalazłeś nową lub lepszą wartość niż w bazie (wartość zgodna z bazą lub nieznaleziona → null):
    - birth_date (pełna data ISO) lub birth_year (sam rocznik) — WYŁĄCZNIE przy wyraźnym dowodzie w snippetach; jeśli baza ma inny rocznik niż źródła, zaproponuj poprawkę i zacytuj dowód w evidence
    - hometown, sub_discipline (dyscypliny GŁÓWNEJ nie zmieniasz nigdy)
@@ -280,7 +291,7 @@ const EMPTY_UPDATES: ProposedUpdates = {
 };
 
 export async function POST(request: NextRequest) {
-  let body: { athleteId?: string };
+  let body: { athleteId?: string; ignoreBirthDate?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -288,6 +299,7 @@ export async function POST(request: NextRequest) {
   }
 
   const athleteId = (body.athleteId ?? "").trim();
+  const ignoreBirthDate = body.ignoreBirthDate === true;
   if (!athleteId) {
     return NextResponse.json({ error: "Brak athleteId" }, { status: 400 });
   }
@@ -323,7 +335,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const llm = await enrichWithHaiku(athlete as AthleteRow, results);
+    const llm = await enrichWithHaiku(athlete as AthleteRow, results, ignoreBirthDate);
 
     // Pas bezpieczeństwa: przy mismatch nic nie proponujemy, niezależnie
     // od tego co zwrócił LLM

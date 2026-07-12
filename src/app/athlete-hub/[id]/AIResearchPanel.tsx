@@ -126,7 +126,7 @@ export function AIResearchPanel({ athlete }: { athlete: AthleteProps }) {
     return out;
   }, [data, athlete]);
 
-  async function runResearch() {
+  async function runResearch(opts?: { ignoreBirthDate?: boolean }) {
     if (inFlight.current) return;
     inFlight.current = true;
     setPhase("loading");
@@ -137,7 +137,10 @@ export function AIResearchPanel({ athlete }: { athlete: AthleteProps }) {
       const resp = await fetch("/api/enrich-athlete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ athleteId: athlete.id }),
+        body: JSON.stringify({
+          athleteId: athlete.id,
+          ignoreBirthDate: opts?.ignoreBirthDate === true,
+        }),
       });
       const json = await resp.json();
       if (!resp.ok) throw new Error(json.error ?? `Błąd ${resp.status}`);
@@ -253,7 +256,7 @@ export function AIResearchPanel({ athlete }: { athlete: AthleteProps }) {
         </div>
         <button
           type="button"
-          onClick={runResearch}
+          onClick={() => runResearch()}
           disabled={phase === "loading"}
           className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider shrink-0"
           style={{
@@ -362,6 +365,18 @@ export function AIResearchPanel({ athlete }: { athlete: AthleteProps }) {
               <p className="text-xs mt-0.5" style={{ color: "var(--color-muted)" }}>
                 {data.identity_note}
               </p>
+            )}
+            {data.identity_match !== "confirmed" && athlete.birth_date && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => runResearch({ ignoreBirthDate: true })}
+                  className="btn-ghost px-3 py-1.5 text-xs"
+                  title="Wiek w bazie bywa błędny (dane z pipeline'u) — powtórz research traktując go jako nieznany"
+                >
+                  Wiek w bazie może być błędny — szukaj ponownie bez niego
+                </button>
+              </div>
             )}
           </div>
 
