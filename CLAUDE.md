@@ -50,7 +50,7 @@ Migration: `supabase/migrations/0001_initial_schema.sql`
 |---|---|---|
 | `/search` | Wyszukiwanie — ad-hoc live research zawodnika (Serper + Claude Haiku + Apify, `POST /api/search-athlete`); narzędzie ręczne, NIE podlega pipeline switches; wymaga `SERPER_API_KEY`/`ANTHROPIC_API_KEY`/`APIFY_API_TOKEN` w env Vercela | Done |
 | `/news-hub` | News Hub — magazine grid, Poland/World toggle, discipline filter | Done |
-| `/athlete-hub` | Athlete Hub — athlete cards grid with filters; profile: score history chart, factor breakdown, similar athletes, federation rankings | Done |
+| `/athlete-hub` | Athlete Hub — athlete cards grid with filters; profile: score history chart, factor breakdown, similar athletes, federation rankings; panel **Research AI** (`POST /api/enrich-athlete`, Serper + Haiku + Apify jak `/search`) — pogłębiony research istniejącego zawodnika z kotwicą tożsamości (zapytania doprecyzowane dyscypliną, LLM odrzuca wyniki o innych osobach), propozycje jako diff do zaznaczenia (birth_date/hometown/sub_discipline/bio/IG + artykuły → `news_articles`), zapis przez server action `applyEnrichment` dopiero po akceptacji skauta | Done |
 | `/compare` | Porównywarka — side-by-side do 4 zawodników (Talent Score + składowe, Brand Fit, rankingi federacji, wzmianki 30d, IG); picker z live search (server action), stan w `?ids=` | Done |
 | `/gap-analysis` | Gap Analysis / Red Bull Heatmap — discipline × coverage matrix | Done |
 | `/breakout-radar` | Breakout Radar — athletes with biggest score jumps last 7/30d | Done |

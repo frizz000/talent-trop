@@ -7,6 +7,7 @@ import { ScoutNoteForm } from "./ScoutNoteForm";
 import { ScoreInfoButton } from "./ScoreInfoButton";
 import { WatchlistStatusSelect } from "./WatchlistStatusSelect";
 import { ScoreTrendChart } from "./ScoreTrendChart";
+import { AIResearchPanel } from "./AIResearchPanel";
 import { updateDiscoveryStatus } from "./actions";
 
 export const revalidate = 60;
@@ -413,6 +414,22 @@ export default async function AthleteProfilePage({ params }: Props) {
           )}
         </div>
       </div>
+
+      {/* Research AI — pogłębiony research zawodnika w internecie */}
+      <AIResearchPanel
+        athlete={{
+          id: athlete.id,
+          name: athlete.name,
+          discipline: athlete.discipline,
+          sub_discipline: athlete.sub_discipline ?? null,
+          birth_date: athlete.birth_date ?? null,
+          hometown: athlete.hometown ?? null,
+          bio_summary: athlete.bio_summary ?? null,
+          instagram:
+            (athlete.socials as Record<string, string> | null)?.instagram ?? null,
+          photo_url: athlete.photo_url ?? null,
+        }}
+      />
 
       {/* Talent score history */}
       {history.length >= 2 && (

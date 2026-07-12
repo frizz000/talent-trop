@@ -7,6 +7,7 @@ import {
   type SerperResult,
 } from "@/lib/serper";
 import { fetchInstagramProfile, type InstagramProfile } from "@/lib/apify";
+import { extractJsonObject } from "@/lib/llm";
 
 /**
  * POST /api/search-athlete — ad-hoc research zawodnika po imieniu i nazwisku.
@@ -124,23 +125,6 @@ export type Extraction = {
   disambiguation_needed: boolean;
   disambiguation_candidates: DisambiguationCandidate[];
 };
-
-/** Toleruje prozę/fence'y wokół pierwszego obiektu {...} — port _extract_json_object z social_discovery.py. */
-function extractJsonObject(raw: string): Record<string, unknown> {
-  let text = raw.trim();
-  if (text.startsWith("```")) {
-    const parts = text.split("```");
-    if (parts.length > 1) text = parts[1];
-    if (text.startsWith("json")) text = text.slice(4);
-    text = text.trim();
-  }
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) {
-    throw new Error(`Brak obiektu JSON w odpowiedzi LLM: ${text.slice(0, 120)}`);
-  }
-  return JSON.parse(text.slice(start, end + 1));
-}
 
 async function extractWithHaiku(
   name: string,
