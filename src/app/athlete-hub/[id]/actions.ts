@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { storeAvatarFromUrl } from "@/lib/avatar";
+import { recomputeTalentScore } from "@/lib/talent-score";
 
 export async function updateDiscoveryStatus(formData: FormData) {
   const athleteId = formData.get("athlete_id") as string;
@@ -50,12 +52,20 @@ export type ApplyEnrichmentInput = {
     verified: boolean;
     is_private: boolean;
     bio: string | null;
+    /** Link CDN Instagrama z Apify — re-hostowany w Storage, nigdy do DB */
+    profile_pic_url: string | null;
   } | null;
   articles: EnrichmentArticleInput[];
 };
 
 export type ApplyEnrichmentResult =
-  | { ok: true; articles_added: number; articles_linked: number }
+  | {
+      ok: true;
+      articles_added: number;
+      articles_linked: number;
+      /** Świeżo przeliczony talent score (null gdy przeliczenie się nie udało) */
+      new_score: number | null;
+    }
   | { ok: false; error: string };
 
 const SENTIMENTS = new Set(["positive", "neutral", "negative"]);
@@ -97,6 +107,7 @@ export async function applyEnrichment(
     ?.replace(/^@/, "")
     .toLowerCase()
     .match(/^[a-z0-9._]{1,30}$/)?.[0];
+  let avatarUrl: string | null = null;
   if (igHandle) {
     patch.socials = {
       ...((athlete.socials as Record<string, string>) ?? {}),
@@ -104,6 +115,16 @@ export async function applyEnrichment(
     };
     if (athlete.social_status === "not_found") {
       patch.social_status = "pending_review";
+    }
+    // Zdjęcie profilowe z IG → Storage (link CDN wygasa, więc re-host od razu);
+    // ?v= wymusza odświeżenie w przeglądarce mimo stałej ścieżki pliku
+    if (input.instagram?.profile_pic_url) {
+      avatarUrl = await storeAvatarFromUrl(
+        supabase,
+        input.athlete_id,
+        input.instagram.profile_pic_url
+      );
+      if (avatarUrl) patch.photo_url = `${avatarUrl}?v=${Date.now()}`;
     }
   }
 
@@ -166,38 +187,68 @@ export async function applyEnrichment(
     }
   }
 
-  // 3. social_profiles — tylko gdy nie ma jeszcze wiersza IG
+  // 3. social_profiles — insert nowego wiersza IG lub odświeżenie istniejącego
   if (igHandle && input.instagram) {
+    const scraped = input.instagram.followers != null;
+    const profileRow = {
+      handle: igHandle,
+      followers_count: input.instagram.followers,
+      following_count: input.instagram.following,
+      posts_count: input.instagram.posts,
+      is_verified_account: input.instagram.verified,
+      is_private: input.instagram.is_private,
+      bio_text: input.instagram.bio,
+      profile_pic_url: avatarUrl,
+      enrichment_status: scraped ? "enriched" : "pending",
+      last_scraped_at: scraped ? new Date().toISOString() : null,
+    };
     const { data: existingProfile } = await supabase
       .from("social_profiles")
       .select("id")
       .eq("athlete_id", input.athlete_id)
       .eq("platform", "instagram")
       .maybeSingle();
-    if (!existingProfile) {
-      const { error: profileError } = await supabase.from("social_profiles").insert({
-        athlete_id: input.athlete_id,
-        platform: "instagram",
-        handle: igHandle,
-        discovery_method: "manual_confirmed",
-        discovery_confidence: 0.9,
-        followers_count: input.instagram.followers,
-        following_count: input.instagram.following,
-        posts_count: input.instagram.posts,
-        is_verified_account: input.instagram.verified,
-        is_private: input.instagram.is_private,
-        bio_text: input.instagram.bio,
-        last_scraped_at:
-          input.instagram.followers != null ? new Date().toISOString() : null,
-      });
+    if (existingProfile && !scraped) {
+      // Brak świeżych danych z Apify — nie nadpisuj istniejących metryk nullami
+    } else {
+      const { error: profileError } = existingProfile
+        ? await supabase
+            .from("social_profiles")
+            .update(profileRow)
+            .eq("id", existingProfile.id)
+        : await supabase.from("social_profiles").insert({
+            ...profileRow,
+            athlete_id: input.athlete_id,
+            platform: "instagram",
+            discovery_method: "manual_confirmed",
+            discovery_confidence: 0.9,
+          });
       if (profileError) {
         console.error("[applyEnrichment] social_profiles:", profileError.message);
       }
     }
   }
 
+  // 4. Świeże dane (wiek, artykuły) → od razu przelicz talent score,
+  // zamiast czekać na dzienny cron compute.yml
+  let newScore: number | null = null;
+  try {
+    const recomputed = await recomputeTalentScore(supabase, input.athlete_id);
+    newScore = recomputed?.score ?? null;
+  } catch (e) {
+    console.error(
+      "[applyEnrichment] recompute:",
+      e instanceof Error ? e.message : String(e)
+    );
+  }
+
   revalidatePath(`/athlete-hub/${input.athlete_id}`);
   revalidatePath("/athlete-hub");
   revalidatePath("/news-hub");
-  return { ok: true, articles_added: articlesAdded, articles_linked: articlesLinked };
+  return {
+    ok: true,
+    articles_added: articlesAdded,
+    articles_linked: articlesLinked,
+    new_score: newScore,
+  };
 }

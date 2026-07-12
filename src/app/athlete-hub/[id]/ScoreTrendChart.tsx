@@ -2,7 +2,40 @@
 
 import { useMemo, useRef, useState } from "react";
 
-export type TrendPoint = { date: string; score: number };
+export type TrendPoint = {
+  date: string;
+  score: number;
+  /** Breakdown z talent_score_history.factors — do wyjaśnienia skoków w tooltipie */
+  factors?: Record<string, number> | null;
+};
+
+const FACTOR_LABELS: Record<string, string> = {
+  age_factor: "wiek",
+  federation_rank_factor: "ranking fed.",
+  mention_spike_factor: "wzmianki",
+  sentiment_factor: "sentyment",
+  social_signal_factor: "social",
+  breakthrough_factor: "przełom",
+  discipline_gap_multiplier: "mnożnik luki",
+};
+
+/** Największe zmiany składowych między dwoma pomiarami — wyjaśnienie skoku. */
+function factorDeltas(
+  curr: Record<string, number> | null | undefined,
+  prev: Record<string, number> | null | undefined
+): Array<{ label: string; delta: number; isMultiplier: boolean }> {
+  if (!curr || !prev) return [];
+  const out: Array<{ label: string; delta: number; isMultiplier: boolean }> = [];
+  for (const [key, label] of Object.entries(FACTOR_LABELS)) {
+    const c = curr[key];
+    const p = prev[key];
+    if (typeof c !== "number" || typeof p !== "number") continue;
+    const delta = c - p;
+    if (Math.abs(delta) < 0.05) continue;
+    out.push({ label, delta, isMultiplier: key === "discipline_gap_multiplier" });
+  }
+  return out.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 3);
+}
 
 const W = 640;
 const H = 200;
@@ -215,6 +248,21 @@ export function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
               </span>
             )}
           </p>
+          {/* Dlaczego zmiana — największe delty składowych vs poprzedni pomiar */}
+          {prev &&
+            hover.score !== prev.score &&
+            factorDeltas(hover.factors, prev.factors).map((d) => (
+              <p
+                key={d.label}
+                className="stat text-[10px] leading-tight"
+                style={{
+                  color: d.delta > 0 ? "var(--color-trend-up)" : "var(--color-accent)",
+                }}
+              >
+                {d.label} {d.delta > 0 ? "+" : ""}
+                {d.isMultiplier ? `×${d.delta.toFixed(2)}` : d.delta.toFixed(1)}
+              </p>
+            ))}
         </div>
       )}
     </div>

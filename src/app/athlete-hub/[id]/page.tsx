@@ -129,7 +129,7 @@ export default async function AthleteProfilePage({ params }: Props) {
 
   if (!athlete) notFound();
 
-  const [historyRes, brandFitRes, notesRes, eventsRes, newsRes, fedRes] = await Promise.all([
+  const [historyRes, brandFitRes, notesRes, eventsRes, newsRes, fedRes, socialRes] = await Promise.all([
     supabase
       .from("talent_score_history")
       .select("score, computed_at, factors")
@@ -165,6 +165,10 @@ export default async function AthleteProfilePage({ params }: Props) {
       .eq("athlete_id", id)
       .order("season", { ascending: false })
       .order("ranking_position", { ascending: true }),
+    supabase
+      .from("social_profiles")
+      .select("platform, handle, followers_count, is_verified_account")
+      .eq("athlete_id", id),
   ]);
 
   const similar = await fetchSimilarAthletes(supabase, athlete);
@@ -189,6 +193,14 @@ export default async function AthleteProfilePage({ params }: Props) {
     : null;
 
   const brandFitFactors = brandFit?.factors as Record<string, unknown> | null;
+
+  // Linki social — socials jsonb (URL) + social_profiles (handle, followers)
+  const socials = (athlete.socials ?? {}) as Record<string, string>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const igProfile = (socialRes.data ?? []).find((p: any) => p.platform === "instagram");
+  const igUrl =
+    socials.instagram ??
+    (igProfile?.handle ? `https://www.instagram.com/${igProfile.handle}/` : null);
 
   return (
     <div className="p-6 lg:p-8" style={{ maxWidth: "1100px" }}>
@@ -357,6 +369,47 @@ export default async function AthleteProfilePage({ params }: Props) {
             >
               ⇄ Porównaj
             </Link>
+            {igUrl && (
+              <a
+                href={igUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="chip"
+                style={{ color: "var(--color-accent-hover)", textDecoration: "none" }}
+                title="Otwórz profil na Instagramie"
+              >
+                IG{igProfile?.handle ? ` @${igProfile.handle}` : ""}
+                {igProfile?.followers_count != null && (
+                  <span className="stat">
+                    {" · "}
+                    {Number(igProfile.followers_count).toLocaleString("pl-PL")}
+                  </span>
+                )}
+                {" ↗"}
+              </a>
+            )}
+            {socials.tiktok && (
+              <a
+                href={socials.tiktok}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="chip"
+                style={{ color: "var(--color-text)", textDecoration: "none" }}
+              >
+                TikTok ↗
+              </a>
+            )}
+            {socials.x && (
+              <a
+                href={socials.x}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="chip"
+                style={{ color: "var(--color-text)", textDecoration: "none" }}
+              >
+                X ↗
+              </a>
+            )}
           </div>
 
           {/* Score + sparkline */}
@@ -450,6 +503,7 @@ export default async function AthleteProfilePage({ params }: Props) {
             points={history.map((h) => ({
               date: h.computed_at,
               score: Number(h.score),
+              factors: (h.factors as Record<string, number> | null) ?? null,
             }))}
           />
         </div>

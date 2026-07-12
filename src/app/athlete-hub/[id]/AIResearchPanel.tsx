@@ -197,6 +197,7 @@ export function AIResearchPanel({ athlete }: { athlete: AthleteProps }) {
               verified: data.instagram?.isVerified ?? false,
               is_private: data.instagram?.isPrivate ?? false,
               bio: data.instagram?.bioText ?? null,
+              profile_pic_url: data.instagram?.profilePicUrl ?? null,
             }
           : null,
       articles: data.articles
@@ -219,6 +220,7 @@ export function AIResearchPanel({ athlete }: { athlete: AthleteProps }) {
         if (fieldCount > 0) parts.push(`zaktualizowane pola: ${fieldCount}`);
         if (result.articles_added > 0) parts.push(`nowe artykuły: ${result.articles_added}`);
         if (result.articles_linked > 0) parts.push(`podpięte artykuły: ${result.articles_linked}`);
+        if (result.new_score != null) parts.push(`talent score przeliczony: ${result.new_score.toFixed(0)}`);
         setDoneMsg(parts.length > 0 ? parts.join(" · ") : "brak zmian do zapisania");
         setPhase("done");
         router.refresh();
